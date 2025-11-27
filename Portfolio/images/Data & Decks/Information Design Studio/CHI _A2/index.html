@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Energy Usage & Thermal Comfort Analysis</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Landing Section -->
+  <header>
+  <h1>Building Comfort vs. Energy Cost</h1>
+<p>Exploring how indoor conditions shift between comfort and efficiency across time</p>
+</header>
+
+<div class="project-description">
+    <h2>When Is Comfort Worth the Cost?</h2>
+    <p>
+    In every building, there's a quiet tradeoff playing out — between the energy we use to keep people comfortable and how comfortable they actually feel. 
+    Is the HVAC system working too hard for too little reward? Or are there missed opportunities to do more with less?
+    </p>
+
+    <div class="project-note methodology">
+        <h4>How It Works</h4>
+        <p>
+          A custom <strong>HVAC usage score</strong> is calculated using the difference between air temperature 
+          and radiant temperature (|ta - tmrt|), along with normalized CO₂ levels. This, combined with <strong>PMV scores</strong> (for thermal comfort), allows
+           classifications into <strong>4 performance scenarios</strong>. To better capture usage patterns, data is divided into <strong>work
+         hours (9 AM – 5 PM)</strong> and <strong>off hours</strong>.
+        </p>
+    </div>
+
+<div class="key-insights">
+    <h3>Key Insights for Experts</h3>
+    <ul>
+        <li>
+            <strong>Peak Performance Zones</strong>
+            <span>Identify moments when your building achieves optimal comfort with minimal energy — your blueprint for efficient operations</span>
+        </li>
+        <li>
+            <strong>Hidden Cost Centers</strong>
+            <span>Spot where energy is being wasted or comfort falls short — pinpointing exactly where and when to make cost-saving improvements</span>
+        </li>
+        <li>
+            <strong>Occupancy Intelligence</strong>
+            <span>Compare work hours vs. off-hours patterns to reveal smart automation opportunities and unnecessary energy use</span>
+        </li>
+        <li>
+            <strong>Time-Based Patterns</strong>
+            <span>Track how performance shifts across hours, days, and seasons — turning timing patterns into optimization strategies</span>
+        </li>
+    </ul>
+</div>
+
+
+    <div class="project-note data">
+        <h4>Data Source</h4>
+        <p>
+            This visualization uses data from 2019 SAMBA system, focusing on zones 8 & 244 on the 30th floor of an office building. 
+            This visualization use temperature, radiant heat, CO₂, and comfort data, recorded per 5 minutes.
+        </p>
+        </div>
+
+    <!-- Year View -->
+    <section>
+        <h2 class="section-title">Year view</h2> 
+        <p class="section-description">
+            The 365 days breakdown lets you explore year performance patterns in detail. <br>Colored background indicate performance scenarios: WORK hours shown in the upper half & BREAK hours in the lower half.
+        </p>
+      <div class="container">
+    <div class="controls-wrapper">
+        <div class="control-area">
+            <div class="control-section">
+                <div class="control-group">
+                    <div class="legend-title">Scenarios</div>
+                    <div id="scenarioLegends" class="scenario-legends"></div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <div class="control-group">
+                    <label for="scenarioSelect" class="legend-title">Scenario Filter</label>
+                    <select id="scenarioSelect" class="select-style">
+                        <option value="all">All Scenarios</option>
+                        <option value="none">None</option>
+                        <option value="1">Optimal</option>
+                        <option value="2">Inefficient Energy</option>
+                        <option value="3">Thermal Overdrive</option>
+                        <option value="4">Thermal Neglect</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+            
+            <div class="control-section">
+                <div class="control-group">
+                    <div class="legend-title">Metrics</div>
+                    <div class="checkbox-group">
+                        <label class="checkbox-legend">
+                            <input type="checkbox" id="hvacWork" checked>
+                            <span class="color-box" style="background:#0041C4;"></span>
+                            <span>HVAC (Work)</span>
+                        </label>
+                        <label class="checkbox-legend">
+                            <input type="checkbox" id="hvacBreak" checked>
+                            <span class="color-box" style="background: #3FA9F5;"></span>
+                            <span>HVAC (Break)</span>
+                        </label>
+                        <label class="checkbox-legend">
+                            <input type="checkbox" id="pmvWork" checked>
+                            <span class="color-box" style="background: #991F1B;"></span>
+                            <span>PMV (Work)</span>
+                        </label>
+                        <label class="checkbox-legend">
+                            <input type="checkbox" id="pmvBreak" checked>
+                            <span class="color-box" style="background: #FF6F61;"></span>
+                            <span>PMV (Break)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="booklet-container">
+            <div class="booklet">
+<div class="booklet-content">
+    <div class="page" data-page="1">
+        <h3>Use the Visualization</h3>
+        <p>💡Use the dropdown and checkbox to customize your view.<br>
+        👇Hovering over any point reveals day-specific data.<br>
+        🔎Click & drag to zoom into a range. Seasonal markers are included.
+        <br><br> ➡️ Explore <strong>DEMOs</strong> in the following pages to learn more </p>
+    </div>
+    <div class="page" data-page="2">
+        <h3>Demo 1:Your Peak Performance Zones</h3>
+        <p>Discover precise times when your building achieves optimal comfort with minimal energy. This often happens during breaks, and from May to October, demonstrating how comfort can be maintained with comparatively lower energy use. In work hours, the most prevalent scenario is Overdrive!
+        <br>
+        <strong>Scenario Filter:</strong> Optimal & Overdrive<br>
+        <strong>Metrics:</strong> PMV (work), PMV (break)
+        </p>
+    </div>
+    <div class="page" data-page="3">
+        <h3>Demo 2: High Energy, Year-Round Comfort</h3>
+        <p>Spot hidden cost centers where comfort comes at a high energy price. High energy consumption at work generally ensures year-round comfort. However, excessive use of energy sometimes drives PMV away from the preffered 0 line in certain periods. This demonstrate that energy use is not being context-aware, especially regarding seasonal weathers.
+        <br>
+        <strong>Scenario Filter:</strong> Thermal Overdrive<br>
+        <strong>Metrics:</strong> HVAC (work), PMV (work)
+        </p>
+    </div>
+    <div class="page" data-page="4">
+        <h3>Demo 3: Occupancy Intelligence & Time-Based Patterns</h3>
+        <p>See how energy use changes between work and break times, and across weekdays and weekends. Energy usage is consistently higher during work hours and drops on weekends, precisely when thermal comfort often improves (getting closer to 0) during these break days in winter and spring. The reverse goes for summertime. This reveals how activity levels influence consumption and comfort.
+        <br>
+        <strong>Scenario Filter:</strong> None<br>
+        <strong>Metrics:</strong> HVAC (work), HVAC (break), PMV (work)
+        </p>
+    </div>
+    <div class="page" data-page="5">
+        <h3>Demo 4: Analyze Critical Seasonal Cycles</h3>
+        <p>Reveal significant inefficiencies during summer with PMV leaning to the hot side in work hours. Focus on moments where high energy usage still results in hot and uncomfortable conditions. These low comfort periods identify specific times and areas for targeted improvements, reducing inefficiency and improving comfort. 
+        <br>
+        <strong>Scenario Filter:</strong> All<br>
+        <strong>Metrics:</strong> PMV (work)
+        </p>
+    </div>
+    <div class="page" data-page="6">
+        <h3>Explore Further</h3>
+        <p>Leverage the <strong>DAY VIEW</strong> to dive deeper into hour-by-hour cycles: the granularity that could support <strong>ACTION</strong> </p>
+    </div>
+</div>
+                <div class="booklet-navigation">
+                    <button class="prev-btn">←</button>
+                    <div class="page-counter">
+                        <span class="current-page">1</span>/<span class="total-pages">6</span>
+                    </div>
+                    <button class="next-btn">→</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="chart"></div>
+</div>
+    </section>
+
+    <!-- 24hr View -->
+ 
+        <h2 class="section-title">Day View</h2>
+        <p class="section-description">
+            The 24-hour breakdown lets you explore each day's performance in detail. Use the slider to toggle through the year and examine how Energy score & PMV shift by hour.
+        </p>
+        <div class="container">
+                <div id="hrdaily"></div>
+        </div>
+    </section>
+    <div class="project-note data">
+          <h4>Summer Weekend</h4>
+            <p>All time too warm, with thermal neglects in break hours and Inefficient Energy in work hours. Changes in engergy usage have minimal affect on thermal comfort</p>
+           <h4>Fall Weekday</h4>
+            <p>PMV stays in the comfortable range throughout the day. In work hours, energy usage drives up, but this is unnecessary.</p>
+            <h4>Winter Weekday </h4>
+            <p>Similar to the Fall Weekday, PMV stays in the comfortable range throughout. Rises in energy use even drive the PMV out of the preffered state (PMV = 0) </p>
+            <h4>Spring Weekend</h4>
+            <p>As it is the weekend of a fairly pleasant season, PMV is in comfortable range through out; however, there is excessive usage of HVAC energy. </p>
+</div>
+<div class="key-insights">
+    <div></div><h2>Now What?</h2>
+    <p>
+    Ultimately, this web application is designed to transform raw building data into actionable intelligence. 
+    By vividly illustrating the interplay between energy consumption and occupant comfort at multiple scales, it transforms raw data into a clear roadmap for improvement.
+    This is the tool that empowers stakeholders and experts to make informed decisions that lead to more sustainable, cost-effective, and ultimately, more comfortable buildings.
+    </p>
+</div>
+    <footer>
+        <p>&copy; 2025 Dashboard made by Chi Hoang for DECO 3100 - Sem 1 - A2</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="year.js"></script>
+    <script src="24hr.js"></script>
+     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const booklet = {
+                currentPage: 1,
+                totalPages: 6,
+                pages: null,
+                prevBtn: null,
+                nextBtn: null,
+                currentPageEl: null,
+
+                init: function() {
+                    this.pages = document.querySelectorAll('.page');
+                    this.prevBtn = document.querySelector('.prev-btn');
+                    this.nextBtn = document.querySelector('.next-btn');
+                    this.currentPageEl = document.querySelector('.current-page');
+
+                    this.showPage(1);
+                    this.bindEvents();
+                },
+
+                bindEvents: function() {
+                    this.prevBtn.addEventListener('click', () => this.navigate(-1));
+                    this.nextBtn.addEventListener('click', () => this.navigate(1));
+                },
+
+                navigate: function(direction) {
+                    const newPage = this.currentPage + direction;
+                    if (newPage >= 1 && newPage <= this.totalPages) {
+                        this.showPage(newPage);
+                    }
+                },
+
+                showPage: function(pageNum) {
+                    this.pages.forEach(page => page.classList.remove('active'));
+
+                    const targetPage = document.querySelector(`[data-page="${pageNum}"]`);
+                    if (targetPage) {
+                        targetPage.classList.add('active');
+                    }
+
+                    if (this.currentPageEl) {
+                        this.currentPageEl.textContent = pageNum;
+                    }
+
+                    this.currentPage = pageNum;
+
+                    if (this.prevBtn) {
+                        this.prevBtn.disabled = pageNum === 1;
+                    }
+                    if (this.nextBtn) {
+                        this.nextBtn.disabled = pageNum === this.totalPages;
+                    }
+
+                    // Call the function to update chart annotations
+                    if (typeof updateChartAnnotations === 'function') {
+                        updateChartAnnotations(pageNum);
+                    }
+                }
+            };
+
+            booklet.init();
+        });
+    </script>
+</body>
+</html>
+

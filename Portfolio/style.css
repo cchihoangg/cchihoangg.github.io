@@ -1,0 +1,802 @@
+/* --- Import Web Fonts (Jost & Playfair Display) --- */
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@400&family=Montserrat:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant:wght@400&family=Karla:wght@400;700&display=swap');
+/* --- Global Styles & Resets --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box; /* Ensures padding doesn't affect final width/height */
+}
+
+body {
+    background-color: #f5f0e8; /* Fallback color */
+    
+    /* YOUR BACKGROUND IMAGE PATH HERE: */
+    background-image: url('images/Background.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-attachment: fixed; /* Keeps background stationary */
+
+     font-family: 'Karla','Trebuchet MS', Arial, sans-serif;
+    color: #b12a6b;
+    overflow: hidden; /* Prevents scroll on the body itself */
+    width: 100vw;
+    height: 100vh; /* Full viewport height */
+}
+
+
+.didot-font, 
+h1, 
+/*.nav-links a, 
+.content-header a, */
+.featured-title, 
+.project-title {
+    font-family:  'Bodoni Moda', 'Cormorant', 'Times New Roman', serif;
+    font-weight: normal;
+}
+
+
+/* --- Main Layout --- */
+.main-container {
+    display: flex;
+    width: 100vw; /* Forces full screen width */
+    height: 100vh;
+    max-width: none; 
+    margin: 0;
+}
+
+/* --- Left Bio Section (Fixed) --- */
+.left-bio {
+    width: 40vw;
+    position: fixed; /* Stays in place */
+    height: 100vh;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    padding: 4vh 4.7vw;
+    border-right: 1px solid #b12a6b; 
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+  }
+
+
+.nav-section {
+    text-align: center;
+    flex-shrink: 0; /* Prevents this section from shrinking */
+}
+
+.nav-header {
+    font-size: 0.8vw; /* Adjusted size */
+    color: #b12a6b;
+    letter-spacing: 1px;
+    margin-bottom: 2vh;
+    text-align: center;
+    font-weight: bold;
+}
+
+.nav-links {
+    display: flex;
+    flex-direction: row; /* Changed to row */
+    justify-content: space-around; /* Spreads links out */
+    gap: 0.9vw; /* Adds space between links */
+    margin-bottom: 4vh; /* Increased margin below nav */
+}
+
+.nav-links a {
+    font-size: 1vw; /* Adjusted font size */
+    color: #b12a6b;
+   letter-spacing: 1px; 
+   text-decoration: wavy underline overline;
+    text-decoration-thickness: 0.3px;
+    text-decoration-color: #b12a6b;
+    text-underline-offset: 5px;
+    transition: opacity 0.3s;
+    line-height: 1.2;
+    text-transform: uppercase; /* Added from design */
+    letter-spacing: 1.1px; /* Added from design */
+}
+
+.nav-links a:hover {
+    opacity: 0.7;
+}
+
+/* This container holds the bio info, no longer scrolls */
+.profile-bio-section {
+    text-align: center; /* Centers profile pic and h1 */
+    padding-top: 2vh; /* Adds space above image */
+    /* Removed overflow-y: auto and flex-grow: 1 */
+}
+
+.profile-img {
+    width: 80%;
+    max-width: 18vw;
+    margin: 0 auto 2vh;
+    display: block;
+}
+
+.profile-img img {
+    width: 100%;
+    height: auto; /* This makes the image auto-resize */
+    display: block;
+    /*cursor: pointer; Indicates the image is clickable */
+}
+
+h1 {
+    font-size: 3.5rem; 
+    color: #b12a6b;
+    text-align: center;
+    margin-bottom: 1.5vh;
+}
+
+.bio {
+    font-size: 0.87vw;
+    line-height: 1.6;
+    color: #b12a6b;
+    font-weight: 500;
+    text-align: left;
+    letter-spacing: 0.3px; /* Aligns bio text to the left */
+}
+
+.bio p {
+    margin-bottom: 2vh;
+}
+
+.bio ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.bio li {
+    margin-bottom: 1.5vh;
+    position: relative;
+    padding-left: 1.2vw;
+}
+
+.bio li:before {
+    content: "•";
+    color: #b12a6b;
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+}
+
+/* --- Right Content Section (Scrollable) --- */
+.right-content {
+    width: 60vw;
+    margin-left: 40vw;
+    height: 100vh;
+    display: flex;
+     overflow-y: auto; 
+      overflow-x: hidden;
+    flex-direction: column;
+    position: relative;
+}
+
+
+.content-header {
+    position: sticky; /* Sticks to the top of the .right-content container */
+    top: 0;
+    background-color: transparent; /* Made transparent for background image */
+    /* Removed padding to allow line to span full width */
+    padding-top: 3vh;
+    z-index: 10;
+}
+
+.header-links {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* Added padding here to replace header padding */
+    padding-left: 4vw;
+    padding-right: 4vw;
+}
+
+/* Bolds "See my resume" and "Explore randomly" */
+.header-links > a {
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.header-divider {
+    border: none;
+    border-top: 1px solid #b12a6b;
+    margin-top: 2vh; /* Space between links and line */
+}
+
+.content-header a {
+    font-size: 1vw;
+    color: #b12a6b;
+    transition: opacity 0.3s;
+}
+
+.content-header a:hover {
+    opacity: 0.7;
+}
+
+.social-icons {
+    display: flex;
+    gap: 1.5vw;
+    align-items: center;
+}
+
+.social-icons a {
+    font-size: 1.2vw;
+    color: #b12a6b;
+    text-decoration: none;
+    transition: opacity 0.3s;
+}
+
+.social-icons svg {
+    width: 1.2vw;
+    height: 1.2vw;
+    fill: #b12a6b;
+    transition: opacity 0.3s;
+}
+
+.social-icons a:hover svg {
+    opacity: 0.7;
+}
+
+.scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6vh 4vw ; 
+    scroll-behavior: smooth;
+        /* Lock the scrollbar gutter so layout doesn't shift */
+    scrollbar-gutter: stable; 
+}
+
+.featured-title-container {
+    text-align: center;
+}
+.featured-title {
+    font-size: 3vw;
+    color: #b12a6b;
+    text-align: center;
+    margin-bottom: 1.5vh; /* Space between title and line */
+}
+
+.featured-title-container hr {
+    border: none;
+    border-top: 1px solid #b12a6b;
+    width: 150px; /* Width of the line under the title */
+    margin: 0 auto 5vh; /* Centers the line and adds space below */
+}
+
+.project {
+    margin-bottom: 5vh;
+}
+
+.project-title {
+    font-size: 1.4vw;
+    color: #b12a6b;
+    text-decoration: underline;
+     text-decoration-thickness: 0.2px;
+    text-underline-offset: 7px;
+    margin-bottom: 2vh;
+    text-align: left; /* Changed from design */
+}
+
+.project-title a:hover {
+    opacity: 0.7;
+}
+
+.project-description {
+    font-size: 1.15vw; 
+    line-height: 1.35;  
+    color: #b12a6b;
+    font-weight: 500;   
+    text-align: left;
+    margin-top: 2.5vh; 
+    margin-bottom: 2vh; 
+    letter-spacing: 0.3px;
+   
+}
+
+.project-image {
+    width: 90%;
+    height: auto; 
+    display: block;
+   margin: 0 auto;
+   cursor: pointer;
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+a:hover .project-image {
+    filter: brightness(0.9);
+}
+
+.project-video {
+  width: 90%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden; 
+}
+
+/* --- Gallery Card Container --- */
+.gallery-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    padding: 0.5rem 0;
+}
+
+.gallery-card {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    max-width: 1000px; 
+    margin: 0 auto 2vh; /* Center the card in the empty space */
+    border: 1px solid #b12a6b;
+    border-radius: 4px;
+     cursor: pointer;
+    text-decoration: none;
+    overflow: hidden;
+    background: transparent;
+    position: relative;
+     margin-bottom: 12px;
+}
+ 
+
+/* --- Image: Landscape 5/3 */
+.gallery-card-image {
+ width: 50%;
+ aspect-ratio: 5/3; 
+ overflow: hidden;
+ position: relative;
+}
+
+
+.gallery-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+     }
+
+.gallery-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 12px 40px rgba(189, 41, 113, 0.202);
+   }
+
+/* --- Content: Top Aligned & Elegant --- */
+.gallery-card-content {
+    width: 50%;
+       padding: 1vw; 
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* Keeps text at the top */
+    position: relative;
+}
+
+.gallery-card-title {
+    font-family: 'Bodoni Moda', serif;
+    font-size: 1.4vw; 
+    line-height: 1.1;
+    font-weight:500 ;
+    letter-spacing: 1.2;
+    margin-bottom: 0.5vh;
+    color: #b12a6b;
+    text-underline-offset: 5px;
+}
+
+/* The Tag (e.g., FASHION SHOW) */
+.gallery-card p:first-of-type {
+    font-size: 1vw; 
+    letter-spacing: 1px;
+    margin-bottom: 3vh;
+    opacity: 0.9;
+}
+.gallery-card-description {
+    font-family: 'Karla', sans-serif;
+    font-size: 2vw; 
+    line-height: 1.7;
+    color: #b12a6b;
+    font-weight: 300;
+    letter-spacing: 0.3px;
+  opacity: 0.9;    /* The Line Separator */
+    padding-bottom: 1vh;
+    margin-bottom: 1vh;
+    border-bottom: 1px solid rgba(177, 42, 107, 0.5);
+}
+
+.gallery-card-preview {
+    font-family: 'Karla', sans-serif;
+    font-size: 1.1vw; 
+   line-height: 1.2;
+  color: #b12a6b;
+  opacity: 1;
+  font-weight: 450;
+
+}
+/* --- Pagination Dots --- */
+.pagination {
+    position: fixed;
+    right: 2vw;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5vh;
+    z-index: 100;
+}
+
+.dot {
+    width: 0.7vw;
+    height: 0.7vw;
+    border-radius: 50%;
+    background-color: #b12a6b;
+    opacity: 0.3;
+    cursor: pointer;
+    transition: opacity 0.3s;
+}
+
+.dot.active {
+    opacity: 1;
+}
+
+/* --- Scrollbar Styling --- */
+/* For Webkit browsers (Chrome, Safari) */
+/* Removed .profile-bio-section selector */
+.scrollable-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.scrollable-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+    background: #b12a6b;
+    border-radius: 4px;
+    background-clip: content-box;
+}
+
+/* For Firefox */
+/* Removed .profile-bio-section selector */
+.scrollable-content {
+    scrollbar-width: thin;
+    scrollbar-color: #b12a6b #f5f0e8;
+}
+
+/* --- Post Page Styles --- */
+.post-content {
+    max-width: 100%;
+}
+
+.post-header {
+    text-align: center;
+    margin-bottom: 4vh;
+}
+
+.post-title {
+    font-size: 3vw;
+    color: #b12a6b;
+    margin-bottom: 1vh;
+}
+
+.post-meta {
+    font-size: 0.9vw;
+    color: #b12a6b;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.post-main {
+    font-family: 'Karla', sans-serif;
+    font-size: 1.15vw;
+    line-height: 1.6;
+    color: #b12a6b;
+}
+
+.post-main p {
+    margin-bottom: 2vh;
+}
+
+.post-preview {
+    text-align: center;
+    font-size: 1.2vw;
+    font-style: italic;
+    margin: 3vh 0;
+    opacity: 0.9;
+}
+
+.post-embed {
+    width: 100%;
+    /* Sets the 19:6 horizontal ratio */
+    aspect-ratio: 19 / 6; 
+    margin: 3vh 0;
+    position: relative; /* Essential for the iframe to fill the space correctly */
+}
+
+.post-embed iframe,
+.post-embed embed,
+.post-embed object {
+    position: absolute; 
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    border: none;
+    /* 1. Force a "Virtual Desktop" size */
+    width: 1920px; 
+    /* Height calculation: 1920 * (6 / 19) = 606.3px */
+    height: 606px; 
+        /* 2. Prepare for shrinking */
+    transform-origin: 0 0; /* Scale from the top-left corner */
+    pointer-events: auto; /* Ensure mouse interaction still works */
+}
+
+.post-tools {
+    margin: 3vh 0;
+    padding: 2vh;
+    background-color: rgba(177, 42, 107, 0.05);
+    border-left: 3px solid #b12a6b;
+}
+
+.post-tools h3 {
+    font-family: 'Bodoni Moda', serif;
+    font-size: 1.3vw;
+    margin-bottom: 1vh;
+}
+
+.post-links {
+    margin: 3vh 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+}
+
+.post-links a {
+    color: #b12a6b;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    transition: opacity 0.3s;
+}
+
+.post-links a:hover {
+    opacity: 0.7;
+}
+
+.post-image {
+    width: 90%;
+    height: auto;
+    display: block;
+    margin: 4vh auto;
+    border-radius: 4px;
+    cursor: none;
+}
+
+.post-caption {
+    text-align: center;
+    font-size: 1vw;
+    color: #b12a6b;
+    opacity: 0.85;
+    margin-top: -2vh;
+    margin-bottom: 3vh;
+}
+
+/* Post Navigation Arrows */
+.post-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6vh;
+    padding-top: 3vh;
+    border-top: 1px solid #b12a6b;
+}
+
+.post-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 1vw;
+    color: #b12a6b;
+    text-decoration: none;
+    transition: opacity 0.3s, transform 0.3s;
+    padding: 1vh 1.5vw;
+    max-width: 45%;
+}
+
+.post-nav-link:hover {
+    opacity: 0.7;
+    transform: translateX(0);
+}
+
+.post-nav-prev:hover {
+    transform: translateX(-5px);
+}
+
+.post-nav-next:hover {
+    transform: translateX(5px);
+}
+
+.post-nav-arrow {
+    font-size: 1.5vw;
+    font-weight: bold;
+    font-family: 'Bodoni Moda', serif;
+}
+
+.post-nav-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3vh;
+}
+
+.post-nav-label {
+    font-family: 'Bodoni Moda', serif;
+    font-size: 1.2vw;
+    letter-spacing: 1px;
+}
+
+.post-nav-title {
+    font-family: 'Karla', sans-serif;
+    font-size: 0.85vw;
+    opacity: 0.7;
+    letter-spacing: 0.3px;
+}
+
+/* Loading and Error States */
+.loading, .error {
+    text-align: center;
+    padding: 4vh;
+    font-size: 1.2vw;
+    color: #b12a6b;
+}
+
+.error {
+    color: #b12a6b;
+}
+
+
+/* --- Responsive (Mobile) --- */
+@media (max-width: 1024px) {
+    body {
+        overflow: auto; /* Re-enable body scroll on mobile */
+        height: auto;
+        background-attachment: scroll; /* Allow background to scroll */
+    }
+
+    .main-container {
+        flex-direction: column; /* Stack columns vertically */
+        height: auto;
+    }
+
+    .left-bio {
+        position: relative; /* Change from fixed to relative */
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 2px solid #b12a6b;
+        padding: 4vh 6vw;
+    }
+    
+    /* --- Navigation Fixes --- */
+    .nav-header {
+        font-size: 14px; /* Fixed size for cleaner look */
+        letter-spacing: 2px;
+    }
+    .nav-links {
+        flex-direction: column; 
+        align-items: center;
+        gap: 1.5vh;
+    }
+    .nav-links a {
+        font-size: 1.2rem; /* Approx 19px - readable but not huge */
+        letter-spacing: 1px;
+    }
+    
+    /* --- Profile & Bio Fixes --- */
+    .profile-img {
+        max-width: 50vw; 
+    }
+    h1 {
+        font-size: 2.5rem; /* Standardized large heading */
+        line-height: 1.2;
+    }
+    .bio {
+        font-size: 1rem; /* Standard readable text size (16px) */
+        line-height: 1.6;
+    }
+    .bio li {
+        padding-left: 1.5rem;
+    }
+
+    /* --- Right Content Fixes --- */
+    .right-content {
+        width: 100%;
+        margin-left: 0;
+        height: auto;
+    }
+    
+    .content-header {
+        padding: 3vh 0 2vh; 
+    }
+    
+    /* Reduce header link sizes */
+    .header-links > a {
+        font-size: 0.8rem; 
+    }
+    
+    .header-links {
+        padding-left: 6vw; 
+        padding-right: 6vw;
+    }
+    
+    .social-icons {
+        gap: 4vw;
+    }
+    .social-icons svg {
+        width: 24px; /* Fixed manageable icon size */
+        height: 24px;
+    }
+
+    .scrollable-content {
+        overflow-y: visible; 
+        padding: 4vh 6vw;
+    }
+
+    /* --- Project Section Fixes --- */
+    .featured-title {
+        font-size: 2rem; /* Reduced from the massive 6vw */
+    }
+    .featured-title-container hr {
+        margin-bottom: 4vh;
+        width: 100px;
+    }
+    .project-title {
+        font-size: 1.5rem;
+    }
+
+    .project-description {
+        font-size: 1rem; /* Standard reading size */
+    }
+    /* --- Gallery Card Fixes (Crucial for Mobile) --- */
+    .gallery-card {
+        flex-direction: column; /* Stack image on top of text */
+        margin-bottom: 2rem;
+        height: auto;
+    }
+
+    .gallery-card-image {
+        width: 100%;
+        aspect-ratio: 3/2; /* Maintain shape */
+    }
+
+    .gallery-card-content {
+        width: 100%;
+        padding: 1.5rem;
+    }
+
+    .gallery-card-title {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* This was the specific issue: overriding the 3rem desktop size */
+    .gallery-card-description, 
+    .gallery-card-preview {
+        font-size: 1.1rem; /* Much smaller, readable size */
+        line-height: 1.5;
+    }
+
+    .gallery-card-description {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    /* Hide pagination dots on mobile */
+    .pagination {
+        display: none;
+    }
+}
+@media (max-width: 768px) {
+    .gallery-card-title { font-size: 1.5rem; }
+    .gallery-card-description { font-size: 0.9rem; }
+    .gallery-card p:first-of-type { font-size: 0.7rem; }
+    .gallery-card-preview { font-size: 1rem; }
+}

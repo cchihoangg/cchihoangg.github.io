@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">Chi Hoang - Post</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left Bio Section - Fixed -->
+        <aside class="left-bio">
+            <div class="nav-section">
+                <p class="nav-header">Explore by Collections</p>
+                <nav class="nav-links">
+                    <a href="gallery.html?collection=art">ART & DESIGN</a>
+                    <a href="gallery.html?collection=fashion">FASHION WORK</a>
+                    <a href="gallery.html?collection=writing">WRITING</a>
+                    <a href="gallery.html?collection=data">DATA & DECKS</a>
+                </nav>
+            </div>
+
+            <!-- Profile image and bio -->
+            <div class="profile-bio-section">
+                <div class="profile-img">
+                    <img src="images/featured/bio.jpg" alt="Chi Hoang" id="profileImg">
+                </div>
+                <h1>Chi Hoang</h1>
+
+                <div class="bio">
+                    <p>Studied and worked in 3 continents, and speaks 4 languages, looking for Summer 2026 internship in the Fashion industry in New York City</p>
+                    <ul>
+                        <li>Fashion Merchandising and Digital Culture & Data Analytics with a minor in Writing until May 2027 at TCU</li>
+                        <li>Analytics, Digital Innovation, Sustainability, Storytelling & Design </li>
+                        <li>CliftonStrengths: Ideation, Arranger, Adaptability, Strategic & Input</li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Content Section -->
+        <main class="right-content">
+            <!-- Fixed Header -->
+            <header class="content-header">
+                <div class="header-links">
+                    <a href="homepage.html">← Back to Featured</a>
+                    <a href="#" id="backToGallery">← Back to Gallery</a>
+                    <a href="https://docs.google.com/document/d/e/2PACX-1vThBDiAKbTFzdt8SsC9gygnHmivcjj80ltauwlgi036caJpgFx5PbEjPc5jDcSq5Q/pub" target="_blank" rel="noopener noreferrer">See my resume</a>
+                    <div class="social-icons">
+                        <a href="https://www.linkedin.com/in/chi-hoang-b590ba246/" aria-label="LinkedIn" target="_blank" rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.783-1.75-1.75s.784-1.75 1.75-1.75 1.75.783 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"></path>
+                            </svg>
+                        </a>
+
+                        <a href="https://www.instagram.com/cchi_meow/" aria-label="Instagram" style="color: #b12a6b;" target="_blank" rel="noopener noreferrer">
+                            <svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                width="25" 
+                                height="25" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor"  
+                                stroke-width="2" 
+                                stroke-linecap="round" 
+                                stroke-linejoin="round"
+                            >
+                                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none"></rect>
+                                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" fill="none"></path>
+                                <circle cx="17.5" cy="6.5" r="1.25" fill="currentColor" stroke="none"></circle>
+                            </svg>
+                        </a>
+
+                        <a href="mailto:chi.hoangmai@tcu.edu" aria-label="Email">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M0 3v18h24v-18h-24zm21.518 2l-9.518 7.713-9.518-7.713h19.036zm-19.518 14v-11.817l10 8.107 10-8.107v11.817h-20z"></path>
+                            </svg>
+                        </a>
+                        <a href="#copy-link" aria-label="Copy link">
+                            <svg viewBox="0 0 22 22" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path></svg>
+                        </a>
+                    </div>
+                </div>
+                <hr class="header-divider">
+            </header>
+
+            <!-- Scrollable Content -->
+            <div class="scrollable-content" id="mainContent">
+                <!-- Loading state -->
+                <div class="loading" id="loadingState">Loading post...</div>
+                
+                <!-- Error state (hidden by default) -->
+                <div class="error" id="errorState" style="display: none;">
+                    <p>Unable to load post. Please try again later.</p>
+                </div>
+
+                <!-- Post content will be dynamically inserted here -->
+                <article class="post-content" id="postContent" style="display: none;">
+                    <!-- Post Header -->
+                    <header class="post-header" id="postHeader">
+                        <!-- Title and meta will be inserted here -->
+                    </header>
+
+                    <!-- Post Main Content -->
+                    <div class="post-main" id="postMainContent">
+                        <!-- Description, preview, tools, links, content, and images will be inserted here -->
+                    </div>
+
+                    <!-- Post Navigation -->
+                    <nav class="post-navigation" id="postNavigation">
+                        <a href="#" class="post-nav-link post-nav-prev" id="prevPost" style="display: none;">
+                            <span class="post-nav-arrow">←</span>
+                            <span class="post-nav-label">Previous</span>
+                        </a>
+                        <a href="#" class="post-nav-link post-nav-next" id="nextPost" style="display: none;">
+                            <span class="post-nav-label">Next</span>
+                            <span class="post-nav-arrow">→</span>
+                        </a>
+                    </nav>
+                </article>
+            </div>
+        </main>
+
+        <!-- Pagination Dots -->
+        <div class="pagination" id="pagination"></div>
+
+    </div>
+
+    <script src="postscript.js" defer></script>
+</body>
+</html>
