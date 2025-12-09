@@ -299,7 +299,7 @@ function setupPostNavigation(data, currentPostId) {
 }
 
 // --- Pagination for Images ---
-function initPostPagination() {
+/*function initPostPagination() {
     const images = document.querySelectorAll('.post-image');
     const pagination = document.getElementById('pagination');
     
@@ -342,7 +342,7 @@ function initPostPagination() {
         });
     }
 }
-
+*/
 // --- UI Helpers ---
 function showLoading(show) {
     const loading = document.getElementById('loadingState');

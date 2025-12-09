@@ -252,7 +252,7 @@ h1 {
     text-align: center;
 }
 .featured-title {
-    font-size: 3vw;
+    font-size: 2.5vw;
     color: #b12a6b;
     text-align: center;
     margin-bottom: 1.5vh; /* Space between title and line */
@@ -262,7 +262,7 @@ h1 {
     border: none;
     border-top: 1px solid #b12a6b;
     width: 150px; /* Width of the line under the title */
-    margin: 0 auto 5vh; /* Centers the line and adds space below */
+    margin: 0 auto 4vh; /* Centers the line and adds space below */
 }
 
 .project {
