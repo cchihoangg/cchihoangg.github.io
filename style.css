@@ -55,7 +55,7 @@ h1,
     top: 0;
     height: 100vh;
     padding: 4vh 4.7vw;
-    border-right: 1px solid #b12a6b; 
+    border-right: 2.5px solid #b12a6b; 
     display: flex;
     flex-direction: column;
     z-index: 10;
