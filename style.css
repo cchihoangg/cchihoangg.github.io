@@ -55,7 +55,7 @@ h1,
     top: 0;
     height: 100vh;
     padding: 4vh 4.7vw;
-    border-right: 1.5px solid #b12a6b; 
+    border-right: 1.2px solid #b12a6b; 
     display: flex;
     flex-direction: column;
     z-index: 10;
@@ -195,8 +195,8 @@ h1 {
 
 /* "See my resume" and "Explore randomly" */
 .header-links > a {
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 400;
 }
 
 .header-divider {
