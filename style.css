@@ -719,7 +719,8 @@ a:hover .project-image {
     
     /* Reduce header link sizes */
     .header-links > a {
-        font-size: 0.8rem; 
+        font-size: 0.95rem; 
+        font-weight: bold;
     }
     
     .header-links {
