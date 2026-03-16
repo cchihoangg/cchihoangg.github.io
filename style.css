@@ -526,7 +526,7 @@ a:hover .project-image {
     /* 1. Force a "Virtual Desktop" size */
     width: 1920px; 
     /* Height calculation: 1920 * (6 / 19) = 606.3px */
-    height: 606px; 
+    height: 909px; 
         /* 2. Prepare for shrinking */
     transform-origin: 0 0; /* Scale from the top-left corner */
     pointer-events: auto; /* Ensure mouse interaction still works */
