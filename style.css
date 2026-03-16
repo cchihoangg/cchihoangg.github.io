@@ -508,7 +508,7 @@ a:hover .project-image {
 .post-embed {
     width: 100%;
     /* Sets the 19:6 horizontal ratio */
-    aspect-ratio: 19 / 6; 
+    aspect-ratio: 5 / 3;
     margin: 3vh 0;
     position: relative; /* Essential for the iframe to fill the space correctly */
 }
@@ -526,7 +526,7 @@ a:hover .project-image {
     /* 1. Force a "Virtual Desktop" size */
     width: 1920px; 
     /* Height calculation: 1920 * (6 / 19) = 606.3px */
-    height: 909px; 
+    height: 1100px; 
         /* 2. Prepare for shrinking */
     transform-origin: 0 0; /* Scale from the top-left corner */
     pointer-events: auto; /* Ensure mouse interaction still works */
