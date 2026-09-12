@@ -42,24 +42,42 @@ async function loadData() {
     return portfolioData;
 }
 
+// A real CSV parser (not line-by-line): tracks quote state across the whole
+// text so a quoted cell can contain commas, newlines (Google Sheets exports
+// multi-line cells as literal line breaks inside quotes), and escaped ""
+// quotes — all things that show up constantly once a cell holds actual HTML.
 function parseCSV(csv) {
-    const lines = csv.split('\n').filter(l => l.trim());
-    const headers = splitLine(lines[0]).map(h => h.trim().replace(/"/g, ''));
-    return lines.slice(1).map(line => {
-        const values = splitLine(line);
-        return headers.reduce((obj, h, i) => { obj[h] = (values[i] || '').trim(); return obj; }, {});
-    });
-}
+    const text = csv.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const rows = [];
+    let row = [], field = '', inQuotes = false;
 
-function splitLine(line) {
-    const values = []; let cur = '', inQ = false;
-    for (const ch of line) {
-        if (ch === '"') inQ = !inQ;
-        else if (ch === ',' && !inQ) { values.push(cur); cur = ''; }
-        else cur += ch;
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (inQuotes) {
+            if (ch === '"') {
+                if (text[i + 1] === '"') { field += '"'; i++; } // escaped quote
+                else inQuotes = false;
+            } else {
+                field += ch;
+            }
+        } else if (ch === '"') {
+            inQuotes = true;
+        } else if (ch === ',') {
+            row.push(field); field = '';
+        } else if (ch === '\n') {
+            row.push(field); field = '';
+            rows.push(row); row = [];
+        } else {
+            field += ch;
+        }
     }
-    values.push(cur);
-    return values;
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    if (!rows.length) return [];
+
+    const headers = rows[0].map(h => h.trim());
+    return rows.slice(1)
+        .filter(cols => cols.some(v => v.trim() !== ''))
+        .map(cols => headers.reduce((obj, h, i) => { obj[h] = (cols[i] ?? '').trim(); return obj; }, {}));
 }
 
 const visible = items => items.filter(i => (i.show || '').toLowerCase() === 'y');
@@ -282,7 +300,7 @@ function renderDetail(item) {
     }
 
     if (item.content) {
-        html += `<div class="post-long-content">${linkify(escapeHTML(item.content).replace(/\n/g, '<br>'))}</div>`;
+        html += `<div class="post-long-content">${renderWriteup(item.content)}</div>`;
     }
 
     if (item.tools) {
@@ -465,4 +483,18 @@ function escapeAttr(s) { return escapeHTML(s).replace(/"/g, '&quot;'); }
 /* turn bare URLs in text into links */
 function linkify(text) {
     return text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+}
+
+/* ---------- write-up content: plain text vs. embedded HTML ----------
+   The sheet's "content" cell can hold either plain prose or actual HTML
+   pasted straight into it (e.g. <p>, <img>, <iframe>, custom <div>s...).
+   If it looks like markup, inject it as-is so it renders like real HTML.
+   Otherwise treat it as plain text: escape it, auto-link bare URLs, and
+   turn line breaks into <br> — the previous behaviour, unchanged. */
+function looksLikeHTML(str) {
+    return /<\/?[a-z][\s\S]*?>/i.test(str);
+}
+function renderWriteup(raw) {
+    if (looksLikeHTML(raw)) return raw;
+    return linkify(escapeHTML(raw).replace(/\n/g, '<br>'));
 }
