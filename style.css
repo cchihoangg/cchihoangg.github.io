@@ -79,6 +79,19 @@ body::before {
         radial-gradient(640px 420px at 22% 46%, rgba(197, 93, 89, .12), transparent 70%);
 }
 
+/* fine grain over the aura — reads as frosted/grained glass rather than a flat gradient */
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: .05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+}
+
 a { color: inherit; text-decoration: none; }
 
 img { display: block; max-width: 100%; }
@@ -495,10 +508,10 @@ img { display: block; max-width: 100%; }
 
 .reel-card {
     position: relative;
-    cursor: pointer;
 }
 
 .reel-media {
+    display: block;
     position: relative;
     aspect-ratio: 16 / 10;
     border-radius: var(--radius);
@@ -691,9 +704,13 @@ img { display: block; max-width: 100%; }
    GALLERY PAGE
    ============================================================ */
 .page-head {
-    padding: calc(var(--nav-h) + 3rem) clamp(1rem, 4vw, 3.5rem) 1.6rem;
+    padding: calc(var(--nav-h) + 3rem) clamp(1rem, 4vw, 3.5rem) 1.8rem;
     position: relative;
     z-index: 1;
+    background: linear-gradient(165deg, rgba(255,255,255,.16), rgba(255,255,255,.02));
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    border-bottom: 1px solid rgba(255,255,255,.16);
 }
 .crumbs {
     display: inline-flex;
@@ -731,7 +748,13 @@ img { display: block; max-width: 100%; }
    ============================================================ */
 .rail-wrap {
     position: relative;
-    padding: 0 clamp(1rem, 4vw, 3.5rem) .5rem;
+    padding: 1rem clamp(1rem, 4vw, 3.5rem) 1.1rem;
+    margin: 0 clamp(.4rem, 2vw, 1.5rem);
+    border-radius: calc(var(--radius) + 6px);
+    background: linear-gradient(165deg, rgba(255,255,255,.12), rgba(255,255,255,.02));
+    backdrop-filter: blur(16px) saturate(1.15);
+    -webkit-backdrop-filter: blur(16px) saturate(1.15);
+    border: 1px solid rgba(255,255,255,.12);
 }
 .work-rail {
     display: flex;
@@ -782,6 +805,26 @@ img { display: block; max-width: 100%; }
     position: absolute; inset: 0;
     background: linear-gradient(to top, rgba(15,11,12,.88) 0%, rgba(15,11,12,.2) 50%, transparent 74%);
 }
+.work-open {
+    position: absolute;
+    top: .55rem; right: .55rem;
+    width: 28px; height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(15, 11, 12, .5);
+    color: var(--on-media);
+    opacity: 0;
+    transform: translateY(-3px);
+    transition: opacity .22s ease, transform .22s ease, background .22s ease;
+}
+.work-open svg { width: 14px; height: 14px; }
+.work-card:hover .work-open, .work-card:focus-visible .work-open,
+.reel-card:hover .work-open, .reel-card:focus-visible .work-open {
+    opacity: 1;
+    transform: translateY(0);
+    background: var(--pink-deep);
+}
 .work-cap {
     position: absolute; inset: auto 0 0 0;
     padding: .7rem .8rem;
@@ -827,6 +870,47 @@ img { display: block; max-width: 100%; }
 .rail-edge:disabled { opacity: .35; cursor: default; pointer-events: none; }
 .rail-edge svg { width: 16px; height: 16px; }
 
+/* invites scrolling down to the write-up that's always loaded below */
+.scroll-cue {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin: .8rem clamp(1rem, 4vw, 3.5rem) 0;
+    padding: .55rem 1.1rem;
+    border: 1px solid var(--line-2);
+    border-radius: 99px;
+    background: rgba(255,255,255,.08);
+    color: var(--text-2);
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    cursor: pointer;
+    animation: cueBob 2.4s ease-in-out infinite;
+    transition: border-color .2s, color .2s, background .2s;
+}
+.scroll-cue:hover { border-color: var(--pink); color: var(--pink); background: rgba(255,255,255,.14); }
+.scroll-cue svg { width: 15px; height: 15px; }
+@keyframes cueBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .scroll-cue { animation: none; }
+}
+
+/* prev / next within the current collection — stands in for what used to
+   be post.html's full-catalogue binge nav, scoped to what's in the rail */
+.work-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0 clamp(1rem, 4vw, 3.5rem) 3rem;
+}
+.work-nav:empty { display: none; }
+.work-nav-btn { max-width: 46%; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) { .work-nav-btn { max-width: 100%; } }
+
 /* ============================================================
    POST PAGE
    ============================================================ */
@@ -834,10 +918,10 @@ img { display: block; max-width: 100%; }
 
 .post-hero {
     position: relative;
-    min-height: 68vh;
+    min-height: 46vh;
     display: flex;
     align-items: flex-end;
-    padding: calc(var(--nav-h) + 2.5rem) clamp(1rem, 4vw, 3.5rem) 2.6rem;
+    padding: 2.4rem clamp(1rem, 4vw, 3.5rem) 2.4rem;
     overflow: hidden;
     isolation: isolate;
 }
@@ -856,6 +940,18 @@ img { display: block; max-width: 100%; }
         linear-gradient(to right, rgba(19,16,17,.92), rgba(19,16,17,.3) 60%, transparent);
 }
 .post-hero-inner { max-width: 760px; }
+.post-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--pink);
+    margin-bottom: .7rem;
+}
+.post-kicker::before { content: ''; width: 20px; height: 1px; background: var(--pink); }
 
 .post-title {
     font-family: var(--display);
@@ -897,7 +993,7 @@ img { display: block; max-width: 100%; }
 }
 
 .post-body {
-    max-width: 820px;
+    max-width: 740px;
     margin: 0 auto;
     padding: 3rem clamp(1.2rem, 4vw, 2.5rem) 4rem;
 }

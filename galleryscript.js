@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initRandom();
     initLightbox();
     initRailArrows();
+    initScrollCue();
     loadGallery();
 });
 
@@ -120,10 +121,13 @@ function renderRail() {
         const genre = GENRES[item.collection] ? item.collection : 'fashion';
         const img = item.image_main ? THUMB_DIR + item.image_main.trim() : '';
         return `
-            <button type="button" class="work-card" data-id="${item.id}" data-genre="${genre}" aria-pressed="false">
+            <button type="button" class="work-card" data-id="${item.id}" data-genre="${genre}" aria-pressed="false" aria-label="Open ${escapeAttr(item.title)}">
                 <span class="work-media">
                     ${img ? `<img src="${img}" alt="" loading="lazy">` : ''}
                     <span class="work-shade"></span>
+                    <span class="work-open" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+                    </span>
                     <span class="work-cap">
                         <span class="work-tag"><span class="puck"></span>${GENRES[genre].label}</span>
                         <span class="work-title">${escapeHTML(item.title)}</span>
@@ -170,12 +174,33 @@ function updateRailArrows() {
     next.disabled = rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 4;
 }
 
+/* ---------- scroll cue — invites the reader from the rail down to the write-up ---------- */
+function initScrollCue() {
+    const cue = document.getElementById('scrollCue');
+    if (!cue) return;
+    cue.addEventListener('click', () => {
+        const detail = document.getElementById('detail');
+        if (detail) detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+
+function updateScrollCue(item) {
+    const cue = document.getElementById('scrollCue');
+    const label = document.getElementById('scrollCueLabel');
+    if (!cue) return;
+    if (label) label.textContent = `Read “${item.title}”`;
+    cue.style.display = 'inline-flex';
+}
+
 /* ---------- selection → inline detail ---------- */
 function selectWork(item, opts = {}) {
     document.querySelectorAll('.work-card').forEach(card => {
         const active = card.dataset.id === item.id;
         card.classList.toggle('is-active', active);
         card.setAttribute('aria-pressed', String(active));
+        if (active && opts.centerRail) {
+            card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
     });
 
     renderDetail(item);
@@ -265,7 +290,27 @@ function renderDetail(item) {
 
     main.innerHTML = html;
     detail.style.display = 'block';
+    renderWorkNav(item);
+    updateScrollCue(item);
     setTimeout(scaleEmbeds, 60);
+}
+
+/* prev / next within the currently loaded collection */
+function renderWorkNav(item) {
+    const nav = document.getElementById('workNav');
+    if (!nav) return;
+    const idx = items.findIndex(i => i.id === item.id);
+    const prevItem = idx > 0 ? items[idx - 1] : null;
+    const nextItem = idx < items.length - 1 ? items[idx + 1] : null;
+
+    nav.innerHTML =
+        (prevItem ? `<button type="button" class="btn-pill work-nav-btn" data-dir="prev">← ${escapeHTML(prevItem.title)}</button>` : '<span></span>') +
+        (nextItem ? `<button type="button" class="btn-pill work-nav-btn" data-dir="next">${escapeHTML(nextItem.title)} →</button>` : '<span></span>');
+
+    const prevBtn = nav.querySelector('[data-dir="prev"]');
+    const nextBtn = nav.querySelector('[data-dir="next"]');
+    if (prevBtn) prevBtn.addEventListener('click', () => selectWork(prevItem, { scroll: true, updateUrl: true, centerRail: true }));
+    if (nextBtn) nextBtn.addEventListener('click', () => selectWork(nextItem, { scroll: true, updateUrl: true, centerRail: true }));
 }
 
 /* ---------- embeds ---------- */
@@ -347,7 +392,7 @@ function initRandom() {
             const data = visible(await loadData());
             if (!data.length) throw new Error('empty');
             const pick = data[Math.floor(Math.random() * data.length)];
-            window.location.href = `post.html?id=${pick.id}`;
+            window.location.href = `gallery.html?collection=${pick.collection}&id=${pick.id}`;
         } catch (e) {
             console.error(e);
         } finally {
@@ -371,10 +416,12 @@ function showLoading(show) {
     const error = document.getElementById('errorState');
     const wrap = document.getElementById('railWrap');
     const detail = document.getElementById('detail');
+    const cue = document.getElementById('scrollCue');
     if (loading) loading.style.display = show ? 'block' : 'none';
     if (show && error) error.style.display = 'none';
     if (show && wrap) wrap.style.display = 'none';
     if (show && detail) detail.style.display = 'none';
+    if (show && cue) cue.style.display = 'none';
 }
 
 function showError(msg) {
@@ -382,9 +429,11 @@ function showError(msg) {
     const error = document.getElementById('errorState');
     const wrap = document.getElementById('railWrap');
     const detail = document.getElementById('detail');
+    const cue = document.getElementById('scrollCue');
     if (loading) loading.style.display = 'none';
     if (wrap) wrap.style.display = 'none';
     if (detail) detail.style.display = 'none';
+    if (cue) cue.style.display = 'none';
     if (error) {
         error.style.display = 'block';
         error.innerHTML = `<p>${escapeHTML(msg)}</p>`;

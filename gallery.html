@@ -79,6 +79,11 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
             </div>
+
+            <button class="scroll-cue" id="scrollCue" type="button" style="display:none">
+                <span id="scrollCueLabel">Read the story</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
         </section>
 
         <!-- ===== SELECTED WORK — the rail always has something chosen, so its
@@ -88,6 +93,7 @@
                 <div class="post-hero-media" id="detailHeroMedia"></div>
                 <div class="post-hero-fade"></div>
                 <div class="post-hero-inner">
+                    <p class="post-kicker" id="detailKicker">Now reading</p>
                     <h2 class="post-title" id="detailTitle"></h2>
                     <div class="post-meta" id="detailMeta"></div>
                 </div>
@@ -95,6 +101,7 @@
             <div class="post-body">
                 <div class="post-main" id="detailMain"></div>
             </div>
+            <div class="work-nav" id="workNav"></div>
         </section>
 
     </main>
