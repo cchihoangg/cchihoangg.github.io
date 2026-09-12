@@ -7,8 +7,8 @@
 const API_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPkrIyHaNBs3UJdpLAa9OrGxSFzUHtxuzSPZd-aeqIff8U0KILjsYAaa5SSHNP431bIZ7Ae7aTYHnx/pub?gid=18930479&single=true&output=csv';
 
 // All of the sheet's image_main filenames (e.g. "vogueau_thumb.jpg") live
-// in a flat "images/" folder.
-const IMAGE_BASE = 'images/';
+// in the "images/thumb/" folder (same place gallery.html reads them from).
+const IMAGE_BASE = 'images/thumb/';
 
 const GENRES = {
     fashion: { label: 'Fashion work' },
@@ -113,9 +113,11 @@ async function initHero() {
             `<span>${escapeHtml(genreLabel)}</span><span class="sep">◆</span>` +
             `<span>${escapeHtml(type)}</span><span class="sep">◆</span><span>Project</span>`;
         document.getElementById('heroSynopsis').textContent = synopsis;
-        document.getElementById('heroCta').href = `post.html?id=${item.id}`;
+        const targetUrl = `gallery.html?collection=${encodeURIComponent(genreKey)}&id=${encodeURIComponent(item.id)}`;
+        document.getElementById('heroCta').href = targetUrl;
+        media.href = targetUrl;
         const heroMoreEl = document.getElementById('heroMore');
-        if (heroMoreEl) heroMoreEl.href = `post.html?id=${item.id}`;
+        if (heroMoreEl) heroMoreEl.href = targetUrl;
         dotsEl.querySelectorAll('.hdot').forEach((d, j) => {
             d.classList.toggle('active', j === i);
             d.setAttribute('aria-selected', j === i);
@@ -276,7 +278,7 @@ function initRandom() {
             const data = visible(await loadData());
             if (!data.length) throw new Error('empty');
             const pick = data[Math.floor(Math.random() * data.length)];
-            window.open(`post.html?id=${pick.id}`, '_blank');
+            window.open(`gallery.html?collection=${encodeURIComponent(pick.collection)}&id=${encodeURIComponent(pick.id)}`, '_blank');
         } catch (err) {
             console.error(err);
         } finally {

@@ -85,8 +85,9 @@ async function loadGallery() {
         showLoading(false);
 
         const requestedId = params.get('id');
-        const initial = items.find(i => i.id === requestedId) || items[0];
-        selectWork(initial, { scroll: false, updateUrl: false });
+        const requestedItem = items.find(i => i.id === requestedId);
+        const initial = requestedItem || items[0];
+        selectWork(initial, { scroll: Boolean(requestedItem), updateUrl: false });
     } catch (e) {
         console.error(e);
         showError('Could not load the catalogue. Check your connection and refresh.');
@@ -137,15 +138,31 @@ function renderRail() {
     }).join('');
 
     rail.querySelectorAll('.work-card').forEach(card => {
+        const item = items.find(i => i.id === card.dataset.id);
         card.addEventListener('click', () => {
-            const item = items.find(i => i.id === card.dataset.id);
             if (item) selectWork(item, { scroll: true, updateUrl: true });
         });
+        card.addEventListener('mouseenter', () => showHoverSynopsis(item));
+        card.addEventListener('mouseleave', hideHoverSynopsis);
+        card.addEventListener('focus', () => showHoverSynopsis(item));
+        card.addEventListener('blur', hideHoverSynopsis);
     });
 
     const wrap = document.getElementById('railWrap');
     if (wrap) wrap.style.display = 'flex';
     updateRailArrows();
+}
+
+// preview holds the long synopsis; description is a short subtitle
+function showHoverSynopsis(item) {
+    const el = document.getElementById('hoverSynopsis');
+    if (!el || !item) return;
+    el.textContent = item.preview || item.description || '';
+    el.classList.add('is-visible');
+}
+function hideHoverSynopsis() {
+    const el = document.getElementById('hoverSynopsis');
+    if (el) el.classList.remove('is-visible');
 }
 
 function initRailArrows() {
