@@ -1,391 +1,340 @@
-// API Configuration 
+/* ============================================================
+   CHI. — Post page
+   Cinematic hero · body render · embeds · lightbox · binge nav
+   Data: Google Sheets CSV (published)
+   ============================================================ */
 const API_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPkrIyHaNBs3UJdpLAa9OrGxSFzUHtxuzSPZd-aeqIff8U0KILjsYAaa5SSHNP431bIZ7Ae7aTYHnx/pub?gid=18930479&single=true&output=csv';
 
-// Cache for loaded data
+const THUMB_DIR = 'images/thumb/';
+const GENRES = {
+    fashion: { label: 'Fashion work' },
+    art:     { label: 'Art & design' },
+    writing: { label: 'Writing' },
+    data:    { label: 'Data & decks' }
+};
+
 let portfolioData = null;
 
-// Page initialization
 document.addEventListener('DOMContentLoaded', () => {
+    initNavScroll();
+    initRandom();
+    initProgress();
+    initLightbox();
     initPostPage();
 });
 
-// --- Initialize Post Page ---
+/* ---------- boot ---------- */
 function initPostPage() {
     const postId = new URLSearchParams(window.location.search).get('id');
-    postId ? loadPost(postId) : showError('No post ID specified');
+    if (!postId) { showError('No project specified.'); return; }
+    loadPost(postId);
 }
 
-// --- API Functions ---
 async function loadData() {
     if (portfolioData) return portfolioData;
-    
-    try {
-        const response = await fetch(API_BASE_URL);
-        if (!response.ok) throw new Error('Network response was not ok');
-        
-        const csv = await response.text();
-        portfolioData = parseCSV(csv);
-        return portfolioData;
-    } catch (error) {
-        console.error('API Error:', error);
-        showError('Failed to load data');
-        return null;
-    }
+    const res = await fetch(API_BASE_URL);
+    if (!res.ok) throw new Error('Network error');
+    portfolioData = parseCSV(await res.text());
+    return portfolioData;
 }
 
-// Fast CSV parser
 function parseCSV(csv) {
-    const lines = csv.split('\n').filter(line => line.trim());
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    
+    const lines = csv.split('\n').filter(l => l.trim());
+    const headers = splitLine(lines[0]).map(h => h.trim().replace(/"/g, ''));
     return lines.slice(1).map(line => {
-        const values = [];
-        let current = '';
-        let inQuotes = false;
-        
-        for (let char of line) {
-            if (char === '"') {
-                inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-                values.push(current.trim());
-                current = '';
-            } else {
-                current += char;
-            }
-        }
-        values.push(current.trim());
-
-        return headers.reduce((obj, header, index) => {
-            obj[header] = values[index] || '';
-            return obj;
-        }, {});
+        const values = splitLine(line);
+        return headers.reduce((obj, h, i) => { obj[h] = (values[i] || '').trim(); return obj; }, {});
     });
 }
 
-// --- Post Functions ---
+function splitLine(line) {
+    const values = []; let cur = '', inQ = false;
+    for (const ch of line) {
+        if (ch === '"') inQ = !inQ;
+        else if (ch === ',' && !inQ) { values.push(cur); cur = ''; }
+        else cur += ch;
+    }
+    values.push(cur);
+    return values;
+}
+
+const visible = items => items.filter(i => (i.show || '').toLowerCase() === 'y');
+
+/* ---------- post ---------- */
 async function loadPost(postId) {
     showLoading(true);
-    
     try {
-        const data = await loadData();
-        if (!data) return;
-
-        // Filter only items with show = 'y'
-        const visibleData = data.filter(item => item.show?.toLowerCase() === 'y');
-
-        const post = visibleData.find(item => item.id === postId);
-        
-        if (!post) {
-            showError('Post not found');
-            return;
-        }
+        const data = visible(await loadData());
+        const post = data.find(i => i.id === postId);
+        if (!post) { showError('This project could not be found.'); return; }
 
         setBackLink(post.collection);
         renderPost(post);
-        setupPostNavigation(visibleData, postId);
-        initPostPagination();
+        setupBingeNav(data, postId);
+        scaleEmbeds();
         showLoading(false);
-        
-    } catch (error) {
-        console.error('Post Error:', error);
-        showError('Failed to load post');
-        showLoading(false);
+    } catch (e) {
+        console.error(e);
+        showError('Could not load this project. Check your connection and refresh.');
     }
 }
 
 function setBackLink(collection) {
-    const backLink = document.getElementById('backToGallery');
-    if (backLink) backLink.href = `gallery.html?collection=${collection}`;
+    const back = document.getElementById('backToGallery');
+    if (back && collection) back.href = `gallery.html?collection=${collection}`;
+    document.querySelectorAll('.topnav-links a[data-nav]').forEach(a => {
+        a.classList.toggle('active', a.dataset.nav === collection);
+    });
 }
 
 function renderPost(item) {
     const content = document.getElementById('postContent');
-    const header = document.getElementById('postHeader');
+    const heroMedia = document.getElementById('postHeroMedia');
+    const titleEl = document.getElementById('postTitle');
+    const metaEl = document.getElementById('postMeta');
+    const crumbTitle = document.getElementById('crumbTitle');
     const main = document.getElementById('postMainContent');
     const pageTitle = document.getElementById('pageTitle');
-    
-    if (!content || !header || !main) return;
+    if (!content || !main) return;
 
-    // Update page title
-    if (pageTitle) pageTitle.textContent = `Chi Hoang - ${item.title}`;
+    const genre = GENRES[item.collection] ? item.collection : 'fashion';
 
-    // Build HTML efficiently
+    if (pageTitle) pageTitle.textContent = `Chi Hoang — ${item.title}`;
+    if (titleEl) titleEl.textContent = item.title;
+    if (crumbTitle) crumbTitle.textContent = item.title;
+
+    if (metaEl) {
+        metaEl.innerHTML =
+            `<span class="genre">${GENRES[genre].label}</span>` +
+            `<span class="sep">◆</span><span>Project</span>` +
+            (item.category ? `<span class="sep">◆</span><span>${escapeHTML(item.category)}</span>` : '');
+    }
+
+    // hero image: first picture if available, else thumb
+    let heroSrc = '';
+    for (let i = 1; i <= 20 && !heroSrc; i++) {
+        if (item[`pic${i}`]) heroSrc = `images/${item[`pic${i}`]}`;
+    }
+    if (!heroSrc && item.image_main) heroSrc = THUMB_DIR + item.image_main.trim();
+    if (heroMedia) heroMedia.innerHTML = heroSrc ? `<img src="${heroSrc}" alt="">` : '';
+
+    /* ---- body ---- */
     let html = '';
-    
-    // Header
-    header.innerHTML = `
-        <h1 class="post-title">${item.title}</h1>
-        <div class="post-meta">${item.category || item.collection || ''}</div>
-    `;
 
-    // Description
-    if (item.description) {
-        html += `<p>${item.description}</p>`;
+    if (item.description) html += `<p class="post-lead">${escapeHTML(item.description)}</p>`;
+
+    // embeds (YouTube / iframe / direct URL)
+    const embedRaw = (item.embed || item.Embed || '').trim().replace(/^["']|["']$/g, '');
+    if (embedRaw) {
+        const embedHTML = buildEmbed(embedRaw);
+        if (embedHTML) html += `<div class="post-embed">${embedHTML}</div>`;
     }
-    
-    // Preview (centered)
-    if (item.preview) {
-        html += `<p class="post-preview">${item.preview}</p>`;
-    }
-    
-   // Embeds (YouTube, HTML, or iframes)
-    if (item.embed || item.Embed) { 
-        // Handle capitalization difference in CSV headers (Embed vs embed)
-        let embedContent = (item.embed || item.Embed).trim();
-        
-        // Remove any extra quotes that might have been added during CSV parsing
-        embedContent = embedContent.replace(/^["']|["']$/g, '');
-        
-        let embedHTML = '';
-        
-        // 1. Check if it's a YouTube URL
-        if (embedContent.includes('youtube.com') || embedContent.includes('youtu.be')) {
-            let videoId = '';
-            if (embedContent.includes('youtube.com/watch?v=')) {
-                videoId = embedContent.split('v=')[1]?.split('&')[0];
-            } else if (embedContent.includes('youtu.be/')) {
-                videoId = embedContent.split('youtu.be/')[1]?.split('?')[0];
-            } else if (embedContent.includes('youtube.com/embed/')) {
-                videoId = embedContent.split('embed/')[1]?.split('?')[0];
-            }
-            
-            if (videoId) {
-                // REMOVED INLINE STYLES. CSS controls size now.
-                embedHTML = `
-                    <iframe src="https://www.youtube.com/embed/${videoId}" 
-                            frameborder="0" 
-                            allowfullscreen 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-                    </iframe>
-                `;
-            }
-        } 
-        // 2. Check if it's already an iframe element
-        else if (embedContent.includes('<iframe')) {
-            // Try to extract src attribute
-            let src = null;
-            
-            const srcMatch = embedContent.match(/src\s*=\s*["']([^"']+)["']/i);
-            if (srcMatch) src = srcMatch[1];
-            
-            if (!src) {
-                const urlMatch = embedContent.match(/src\s*=\s*([^\s>]+)/i);
-                if (urlMatch) src = urlMatch[1];
-            }
-            
-            if (src) {
-                // Rebuild clean iframe without hardcoded dimensions
-                embedHTML = `
-                    <iframe src="${src}" 
-                            frameborder="0" 
-                            allowfullscreen
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-                    </iframe>
-                `;
-            } else {
-                // If we can't extract src, use content as-is but strip existing width/height if possible
-                // We rely on the CSS .post-embed iframe { width: 100%; height: 100%; } to override attributes
-                embedHTML = embedContent;
-            }
-        }
-        // 3. Check if it's a direct URL (for p5js, codepen, etc.)
-        else if (embedContent.match(/^https?:\/\//i)) {
-            embedHTML = `
-                <iframe src="${embedContent}" 
-                        frameborder="0" 
-                        allowfullscreen
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-                </iframe>
-            `;
-        }
-        // 4. Other HTML tags
-        else if (embedContent.includes('<')) {
-            embedHTML = embedContent;
-        }
-        
-        // WRAPPER: This applies the aspect-ratio from CSS
-        if (embedHTML) {
-            html += `<div class="post-embed">${embedHTML}</div>`;
-        }
-    }
-       
-    // Links (formatted as: display text__url)
+
+    // links: "Display__url" format
     if (item.links) {
-        html += `<div class="post-links">`;
-        
-        const linkEntries = item.links.split(',').map(link => link.trim());
-        linkEntries.forEach(entry => {
-            // Check if link uses the display__url format
+        const links = item.links.split(',').map(s => s.trim()).filter(Boolean);
+        html += `<div class="post-links">` + links.map(entry => {
             if (entry.includes('__')) {
                 const [display, url] = entry.split('__').map(s => s.trim());
-                html += `<a href="${url}" target="_blank" rel="noopener noreferrer">${display}</a>`;
-            } else {
-                // Fallback to showing the URL as-is
-                html += `<a href="${entry}" target="_blank" rel="noopener noreferrer">${entry}</a>`;
+                return `<a class="btn-pill" href="${url}" target="_blank" rel="noopener noreferrer">↗ ${escapeHTML(display)}</a>`;
             }
-        });
-        
-        html += `</div>`;
+            return `<a class="btn-pill" href="${entry}" target="_blank" rel="noopener noreferrer">↗ ${escapeHTML(entry)}</a>`;
+        }).join('') + `</div>`;
     }
-    
-    // Long content
+
+    // long content
     if (item.content) {
-        html += `<div class="post-long-content">${item.content.replace(/\n/g, '<br>')}</div>`;
+        html += `<div class="post-long-content">${linkify(escapeHTML(item.content).replace(/\n/g, '<br>'))}</div>`;
     }
-    
-    // Images with captions (Gallery sequence - unlimited)
-    // Loop through all properties looking for pic1, pic2, pic3, etc.
-    let imageIndex = 1;
-    while (item[`pic${imageIndex}`]) {
-        const imgFileName = item[`pic${imageIndex}`];
-        const cap = item[`cap${imageIndex}`];
-        
-        // Construct full image path
-        const imgPath = `images/${imgFileName}`;
-        
+
+    // tools
+    if (item.tools) {
         html += `
-            <img src="${imgPath}" alt="Project Image ${imageIndex}" class="post-image" loading="lazy">
-            ${cap ? `<p class="post-caption">${cap}</p>` : ''}
-        `;
-        
-        imageIndex++;
+            <div class="post-tools">
+                <h3>Tools used</h3>
+                <p>${escapeHTML(item.tools)}</p>
+            </div>`;
+    }
+
+    // pictures with captions (unlimited sequence)
+    let i = 1;
+    while (item[`pic${i}`]) {
+        const imgPath = `images/${item[`pic${i}`]}`;
+        const cap = item[`cap${i}`];
+        html += `
+            <figure class="post-figure">
+                <img src="${imgPath}" alt="${escapeAttr(cap || `Project image ${i}`)}" class="post-image" loading="lazy">
+                ${cap ? `<figcaption class="post-caption">${escapeHTML(cap)}</figcaption>` : ''}
+            </figure>`;
+        i++;
     }
 
     main.innerHTML = html;
     content.style.display = 'block';
-    setTimeout(scaleEmbeds, 50);
+    setTimeout(scaleEmbeds, 60);
 }
 
-// --- Post Navigation (Prev/Next Arrows) ---
-function setupPostNavigation(data, currentPostId) {
-    const currentIndex = data.findIndex(item => item.id === currentPostId);
-    
-    const prevPost = document.getElementById('prevPost');
-    const nextPost = document.getElementById('nextPost');
-    
-    if (!prevPost || !nextPost) return;
-    
-    // Find previous post (in sheet row order)
-    if (currentIndex > 0) {
-        const prev = data[currentIndex - 1];
-        prevPost.href = `post.html?id=${prev.id}`;
-        prevPost.innerHTML = `
-            <span class="post-nav-arrow">←</span>
-            <div class="post-nav-text">
-                <span class="post-nav-label">Previous</span>
-                <span class="post-nav-title">${prev.title}</span>
-            </div>
-        `;
-        prevPost.style.display = 'flex';
-    } else {
-        prevPost.style.display = 'none';
+/* ---------- embeds ---------- */
+function buildEmbed(embedContent) {
+    // YouTube
+    if (/youtube\.com|youtu\.be/.test(embedContent)) {
+        let videoId = '';
+        if (embedContent.includes('watch?v=')) videoId = embedContent.split('v=')[1]?.split('&')[0] || '';
+        else if (embedContent.includes('youtu.be/')) videoId = embedContent.split('youtu.be/')[1]?.split('?')[0] || '';
+        else if (embedContent.includes('embed/')) videoId = embedContent.split('embed/')[1]?.split('?')[0] || '';
+        if (videoId) {
+            return `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+        }
     }
-    
-    // Find next post (in sheet row order)
-    if (currentIndex < data.length - 1) {
-        const next = data[currentIndex + 1];
-        nextPost.href = `post.html?id=${next.id}`;
-        nextPost.innerHTML = `
-            <div class="post-nav-text">
-                <span class="post-nav-label">Next</span>
-                <span class="post-nav-title">${next.title}</span>
-            </div>
-            <span class="post-nav-arrow">→</span>
-        `;
-        nextPost.style.display = 'flex';
-    } else {
-        nextPost.style.display = 'none';
+    // existing iframe tag → extract src
+    if (embedContent.includes('<iframe')) {
+        const m = embedContent.match(/src\s*=\s*["']([^"']+)["']/i) || embedContent.match(/src\s*=\s*([^\s>]+)/i);
+        if (m) {
+            return `<iframe src="${m[1]}" frameborder="0" allowfullscreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+        }
+        return embedContent;
     }
+    // direct URL (p5.js, codepen, storymaps…)
+    if (/^https?:\/\//i.test(embedContent)) {
+        return `<iframe src="${embedContent}" frameborder="0" allowfullscreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+    }
+    if (embedContent.includes('<')) return embedContent;
+    return '';
 }
 
-// --- Pagination for Images ---
-/*function initPostPagination() {
-    const images = document.querySelectorAll('.post-image');
-    const pagination = document.getElementById('pagination');
-    
-    if (!pagination || !images.length) {
-        if (pagination) pagination.style.display = 'none';
-        return;
-    }
-    
-    pagination.innerHTML = '';
-    pagination.style.display = 'flex';
-    
-    // Create dots for images
-    const fragment = document.createDocumentFragment();
-    images.forEach((img, i) => {
-        const dot = document.createElement('div');
-        dot.className = 'dot' + (i === 0 ? ' active' : '');
-        dot.addEventListener('click', () => {
-            img.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
-        fragment.appendChild(dot);
+function scaleEmbeds() {
+    const baseWidth = 1920;
+    document.querySelectorAll('.post-embed').forEach(container => {
+        const iframe = container.querySelector('iframe');
+        if (!iframe) return;
+        const scale = container.offsetWidth / baseWidth;
+        iframe.style.transform = `scale(${Math.min(scale, 1)})`;
     });
-    pagination.appendChild(fragment);
-    
-    // Scroll handler with throttling
-    let scrollTimeout;
-    const main = document.getElementById('mainContent');
-    if (main) {
-        main.addEventListener('scroll', () => {
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                const threshold = main.getBoundingClientRect().top + (main.clientHeight * 0.3);
-                const currentIndex = Array.from(images).findIndex(img => 
-                    img.getBoundingClientRect().top > threshold
-                ) - 1;
-                
-                const activeIndex = Math.max(0, currentIndex);
-                const dots = pagination.querySelectorAll('.dot');
-                dots.forEach((dot, i) => dot.classList.toggle('active', i === activeIndex));
-            }, 50);
-        });
-    }
 }
-*/
-// --- UI Helpers ---
+window.addEventListener('resize', scaleEmbeds);
+
+/* ---------- binge nav (prev / next) ---------- */
+function setupBingeNav(data, currentPostId) {
+    const idx = data.findIndex(i => i.id === currentPostId);
+    const prev = document.getElementById('prevPost');
+    const next = document.getElementById('nextPost');
+    if (idx === -1 || !prev || !next) return;
+
+    const set = (el, post, which) => {
+        el.href = `post.html?id=${post.id}`;
+        el.style.display = 'block';
+        const img = el.querySelector('img');
+        const title = el.querySelector('.binge-title');
+        if (img) img.src = post.image_main ? THUMB_DIR + post.image_main.trim() : '';
+        if (img) img.alt = post.title;
+        if (title) title.textContent = post.title;
+    };
+
+    if (idx > 0) set(prev, data[idx - 1], 'prev'); else prev.style.display = 'none';
+    if (idx < data.length - 1) set(next, data[idx + 1], 'next'); else next.style.display = 'none';
+}
+
+/* ---------- lightbox ---------- */
+function initLightbox() {
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lbImg');
+    const close = document.getElementById('lbClose');
+    if (!lb) return;
+
+    document.addEventListener('click', e => {
+        const img = e.target.closest('.post-image');
+        if (img) {
+            lbImg.src = img.src;
+            lbImg.alt = img.alt;
+            lb.classList.add('open');
+            lb.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+    });
+    const shut = () => {
+        lb.classList.remove('open');
+        lb.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    };
+    if (close) close.addEventListener('click', shut);
+    lb.addEventListener('click', e => { if (e.target === lb) shut(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') shut(); });
+}
+
+/* ---------- reading progress ---------- */
+function initProgress() {
+    const bar = document.getElementById('progressBar');
+    if (!bar) return;
+    const update = () => {
+        const h = document.documentElement;
+        const max = h.scrollHeight - h.clientHeight;
+        bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+}
+
+/* ---------- random ---------- */
+function initRandom() {
+    const btn = document.getElementById('randomBtn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+        const lbl = btn.querySelector('.lbl');
+        const orig = lbl.textContent;
+        btn.classList.add('is-loading');
+        lbl.textContent = 'Rolling…';
+        try {
+            const data = visible(await loadData());
+            if (!data.length) throw new Error('empty');
+            const pick = data[Math.floor(Math.random() * data.length)];
+            window.location.href = `post.html?id=${pick.id}`;
+        } catch (e) {
+            console.error(e);
+        } finally {
+            btn.classList.remove('is-loading');
+            lbl.textContent = orig;
+        }
+    });
+}
+
+/* ---------- misc ---------- */
+function initNavScroll() {
+    const nav = document.getElementById('topnav');
+    if (!nav) return;
+    const onScroll = () => nav.classList.toggle('is-scrolled', window.scrollY > 24);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+}
+
 function showLoading(show) {
     const loading = document.getElementById('loadingState');
     const error = document.getElementById('errorState');
     const content = document.getElementById('postContent');
-    
     if (loading) loading.style.display = show ? 'block' : 'none';
-    if (error) error.style.display = 'none';
-    if (content) content.style.display = show ? 'none' : 'block';
+    if (show && error) error.style.display = 'none';
+    if (content && show) content.style.display = 'none';
 }
 
-function showError(message) {
+function showError(msg) {
     const loading = document.getElementById('loadingState');
     const error = document.getElementById('errorState');
-    const content = document.getElementById('postContent');
-    
     if (loading) loading.style.display = 'none';
     if (error) {
         error.style.display = 'block';
-        error.innerHTML = `<p>${message}</p>`;
+        error.innerHTML = `<p>${escapeHTML(msg)}</p>`;
     }
-    if (content) content.style.display = 'none';
-}
-/**
- * Scales iframes to fit their container.
- * Simulates a "zoom out" by shrinking a 1920px iframe to fit the screen.
- */
-function scaleEmbeds() {
-    const embeds = document.querySelectorAll('.post-embed');
-    const baseWidth = 1920; // Must match the CSS width we set
-
-    embeds.forEach(container => {
-        const iframe = container.querySelector('iframe');
-        if (!iframe) return;
-
-        // Calculate the ratio: Current Container Width / 1920
-        const containerWidth = container.offsetWidth;
-        const scale = containerWidth / baseWidth;
-
-        // Apply the zoom
-        iframe.style.transform = `scale(${scale})`;
-    });
 }
 
-// 1. Listen for window resize to adjust scale dynamically
-window.addEventListener('resize', scaleEmbeds);
+function escapeHTML(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escapeAttr(s) { return escapeHTML(s).replace(/"/g, '&quot;'); }
+
+/* turn bare URLs in text into links */
+function linkify(text) {
+    return text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+}

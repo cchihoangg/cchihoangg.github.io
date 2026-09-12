@@ -1,166 +1,247 @@
-/*
- * === Homepage Pagination Script ===
- * Handles pagination dots for the featured projects on homepage
- */
-const API_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPkrIyHaNBs3UJdpLAa9OrGxSFzUHtxuzSPZd-aeqIff8U0KILjsYAaa5SSHNP431bIZ7Ae7aTYHnx/pub?gid=0&single=true&output=csv';
+/* ============================================================
+   CHI. — Homepage
+   Hero slideshow · selected-work reel · random
+   Data: Google Sheets CSV (published) — used only by "Surprise me",
+   which can land on anything in the full catalogue.
+   ============================================================ */
+const API_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPkrIyHaNBs3UJdpLAa9OrGxSFzUHtxuzSPZd-aeqIff8U0KILjsYAaa5SSHNP431bIZ7Ae7aTYHnx/pub?gid=18930479&single=true&output=csv';
+
+const GENRES = {
+    fashion: { label: 'Fashion work' },
+    art:     { label: 'Art & design' },
+    writing: { label: 'Writing' },
+    data:    { label: 'Data & decks' }
+};
+
+const HERO_IDS = ['vogueau', 'fame20263', 'patagonia', 'upcycling'];
+const HERO_META = {
+    vogueau:   { kicker: 'Featured · Editorial', sub: 'Vogue Australia' },
+    fame20263: { kicker: 'Featured · Capsule collection', sub: 'Collina Strada' },
+    patagonia: { kicker: 'Featured · Data & GIS', sub: 'Patagonia Books' },
+    upcycling: { kicker: 'Featured · Slow fashion', sub: '12 documented pieces' }
+};
+const HERO_IMGS = {
+    vogueau:   'images/featured/vogue featured.png',
+    fame20263: 'images/featured/strada featured.png',
+    patagonia: 'images/featured/Patagonia featured.png',
+    upcycling: 'images/featured/upcycle featured.png'
+};
+const HERO_TITLES = {
+    vogueau: 'Internship at Vogue Australia',
+    fame20263: 'Collina Strada AW 26/27 — Geo-Logic Capsule',
+    patagonia: 'Patagonia Data Illustration',
+    upcycling: 'Upcycled!'
+};
+const HERO_SYN = {
+    vogueau: 'The clean-girl aesthetic as a cultural "norm" — tracing how effort shapes the idea of effortlessness. Daily editorial work, from pitching to commercial, with Gladys Lai and Nina Miyashita.',
+    fame20263: 'A sustainable six-piece capsule for Collina Strada interpreting the WGSN "Geo-Logic" macro-trend — playful, organic ideas merged with technical accuracy and eco-friendly sourcing.',
+    patagonia: 'Published, data-driven StoryMaps for Patagonia Books built with ESRI — a sophomore working with three geography seniors on commercial web apps that went live.',
+    upcycling: 'Late nights of sewing, draping and problem-solving turned into a slow-fashion practice — 12 documented pieces and a national television feature.'
+};
+const HERO_GENRE = { vogueau: 'writing', fame20263: 'fashion', patagonia: 'data', upcycling: 'fashion' };
+
+let portfolioData = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize both features
-    initPagination();
-    initRandomExplore();
+    initNavScroll();
+    initYear();
+    initHero();
+    initReel();
+    initRandom();
+    initCopyLink();
 });
 
-// --- 1. Pagination Logic ---
-function initPagination() {
-    const paginationContainer = document.getElementById('pagination-dots'); 
-    const scrollContainer = document.querySelector('.scrollable-content');
-    
-    // Exit if elements don't exist
-    if (!paginationContainer || !scrollContainer) return;
-
-    // Get all project sections
-    const projects = document.querySelectorAll('.project');
-    
-    if (projects.length === 0) return;
-
-    // Create pagination dots
-    const dotsHTML = Array.from(projects).map((project) => 
-        `<span class="dot" data-target="${project.id}"></span>`
-    ).join('');
-    
-    paginationContainer.innerHTML = dotsHTML;
-    
-    // Set first dot as active
-    const dots = paginationContainer.querySelectorAll('.dot');
-    if (dots.length > 0) {
-        dots[0].classList.add('active');
-    }
-
-    // Handle dot clicks
-    paginationContainer.addEventListener('click', (e) => {
-        if (!e.target.classList.contains('dot')) return;
-        
-        const targetId = e.target.dataset.target;
-        const targetProject = document.getElementById(targetId);
-        
-        if (targetProject) {
-            targetProject.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    });
-
-    // Update active dot on scroll
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const targetId = entry.target.id;
-                const correspondingDot = paginationContainer.querySelector(`[data-target="${targetId}"]`);
-                
-                if (correspondingDot) {
-                    dots.forEach(d => d.classList.remove('active'));
-                    correspondingDot.classList.add('active');
-                }
-            }
-        });
-    }, { 
-        root: scrollContainer, 
-        threshold: 0.6 
-    });
-
-    // Observe all projects
-    projects.forEach(project => observer.observe(project));
+/* ---------- data (only "Surprise me" needs this) ---------- */
+async function loadData() {
+    if (portfolioData) return portfolioData;
+    const res = await fetch(API_BASE_URL);
+    if (!res.ok) throw new Error('Network error');
+    portfolioData = parseCSV(await res.text());
+    return portfolioData;
 }
 
-// --- 2. Explore Randomly Logic (Weighted) ---
-function initRandomExplore() {
-        const randomLinks = document.querySelectorAll('a[href="#random"]');
-    
-    if (randomLinks.length === 0) return;
-
-    // Attach listener to all matching elements (in case you have it in nav AND footer)
-    randomLinks.forEach(link => {
-        link.addEventListener('click', async (e) => {
-            e.preventDefault(); // Stop anchor jump or default action
-            
-            const originalText = link.textContent;
-            link.textContent = 'Loading...';
-            link.style.cursor = 'wait';
-
-            try {
-                const response = await fetch(API_BASE_URL);
-                const csvText = await response.text();
-                
-                // Parse CSV to get Weighted Pool of IDs
-                const randomId = getWeightedRandomId(csvText);
-
-                if (randomId) {
-                    // Open in new tab (simulating target="_blank")
-                    window.open(`post.html?id=${randomId}`, '_blank');
-                    
-                    // Reset text immediately since new tab opens
-                    link.textContent = originalText;
-                    link.style.cursor = 'pointer';
-                } else {
-                    alert('No visible projects found.');
-                    link.textContent = originalText;
-                    link.style.cursor = 'pointer';
-                }
-
-            } catch (error) {
-                console.error('Random Explore Error:', error);
-                link.textContent = originalText;
-                link.style.cursor = 'pointer';
-            }
-        });
+function parseCSV(csv) {
+    const lines = csv.split('\n').filter(l => l.trim());
+    const headers = splitLine(lines[0]).map(h => h.trim().replace(/"/g, ''));
+    return lines.slice(1).map(line => {
+        const values = splitLine(line);
+        return headers.reduce((obj, h, i) => { obj[h] = (values[i] || '').trim(); return obj; }, {});
     });
 }
 
-// Helper: Parse CSV and return a SINGLE random ID based on "prob" weights
-function getWeightedRandomId(csv) {
-    const lines = csv.split('\n');
-    if (lines.length < 2) return null;
-
-    // Clean headers to find indices
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
-    const idIndex = headers.indexOf('id');
-    const showIndex = headers.indexOf('show');
-    const probIndex = headers.indexOf('prob'); // Look for the new "prob" column
-
-    if (idIndex === -1 || showIndex === -1) return null;
-
-    const lotteryPool = [];
-
-    // Loop through rows
-    for (let i = 1; i < lines.length; i++) {
-        // Simple split (be careful if your CSV descriptions have commas!)
-        // If descriptions have commas, you might need a regex splitter instead.
-        const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
-        
-        if (row.length > Math.max(idIndex, showIndex)) {
-            const id = row[idIndex].trim();
-            const show = row[showIndex].trim().toLowerCase();
-            
-            // Get Probability (Default to 2 if missing or invalid)
-            let prob = 2; 
-            if (probIndex !== -1 && row[probIndex]) {
-                const parsedProb = parseInt(row[probIndex].trim());
-                if (!isNaN(parsedProb)) {
-                    prob = parsedProb;
-                }
-            }
-
-            // Only include if show == 'y'
-            if (show === 'y' && id) {
-                // Add to pool 'prob' times (1, 2, or 3 times)
-                for (let w = 0; w < prob; w++) {
-                    lotteryPool.push(id);
-                }
-            }
-        }
+/* CSV splitter that respects quotes */
+function splitLine(line) {
+    const values = []; let cur = '', inQ = false;
+    for (const ch of line) {
+        if (ch === '"') inQ = !inQ;
+        else if (ch === ',' && !inQ) { values.push(cur); cur = ''; }
+        else cur += ch;
     }
+    values.push(cur);
+    return values;
+}
 
-    if (lotteryPool.length === 0) return null;
+const visible = items => items.filter(i => (i.show || '').toLowerCase() === 'y');
 
-    // Pick one random winner from the weighted pool
-    const randomIndex = Math.floor(Math.random() * lotteryPool.length);
-    return lotteryPool[randomIndex];
+/* ---------- hero: automated slideshow, 4 dots, rotates on a timer ---------- */
+function initHero() {
+    const media = document.getElementById('heroMedia');
+    const dotsEl = document.getElementById('heroDots');
+    if (!media || !dotsEl) return;
+
+    let idx = 0, timer = null;
+
+    const paint = (i, animate = true) => {
+        const id = HERO_IDS[i];
+        media.innerHTML = `<img src="${HERO_IMGS[id]}" alt="">`;
+        if (animate) {
+            const img = media.querySelector('img');
+            img.style.animation = 'none';
+            requestAnimationFrame(() => { img.style.animation = ''; });
+        }
+        document.getElementById('heroKicker').textContent = HERO_META[id].kicker;
+        document.getElementById('heroTitle').textContent = HERO_TITLES[id];
+        document.getElementById('heroMeta').innerHTML =
+            `<span>${GENRES[HERO_GENRE[id]].label}</span><span class="sep">◆</span>` +
+            `<span>${HERO_META[id].sub}</span><span class="sep">◆</span><span>Project</span>`;
+        document.getElementById('heroSynopsis').textContent = HERO_SYN[id];
+        document.getElementById('heroCta').href = `post.html?id=${id}`;
+        document.getElementById('heroMore').href = `post.html?id=${id}`;
+        dotsEl.querySelectorAll('.hdot').forEach((d, j) => {
+            d.classList.toggle('active', j === i);
+            d.setAttribute('aria-selected', j === i);
+        });
+    };
+
+    HERO_IDS.forEach((id, i) => {
+        const b = document.createElement('button');
+        b.className = 'hdot' + (i === 0 ? ' active' : '');
+        b.setAttribute('role', 'tab');
+        b.setAttribute('aria-label', `Show ${HERO_TITLES[id]}`);
+        b.addEventListener('click', () => { idx = i; paint(i); restart(); });
+        dotsEl.appendChild(b);
+    });
+
+    const goNext = () => { idx = (idx + 1) % HERO_IDS.length; paint(idx); restart(); };
+    const goPrev = () => { idx = (idx - 1 + HERO_IDS.length) % HERO_IDS.length; paint(idx); restart(); };
+    const restart = () => { clearInterval(timer); timer = setInterval(() => { idx = (idx + 1) % HERO_IDS.length; paint(idx); }, 7000); };
+
+    paint(0, false);
+    restart();
+
+    const prevBtn = document.getElementById('heroPrev');
+    const nextBtn = document.getElementById('heroNext');
+    if (prevBtn) prevBtn.addEventListener('click', goPrev);
+    if (nextBtn) nextBtn.addEventListener('click', goNext);
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight') goNext();
+        if (e.key === 'ArrowLeft')  goPrev();
+    });
+}
+
+/* ---------- selected work (reel) ----------
+   Four landscape thumbnails, always visible together as one scene —
+   nothing resizes or scrolls. Hovering, focusing, or tapping a
+   thumbnail holds for a beat, then opens a compact tooltip with its
+   synopsis. Leaving does the same in reverse, so a passing cursor
+   doesn't flicker it open or shut. */
+function initReel() {
+    const grid = document.getElementById('reelGrid');
+    if (!grid) return;
+
+    const cards = Array.from(grid.querySelectorAll('.reel-card'));
+    const OPEN_DELAY = 320;
+    const CLOSE_DELAY = 220;
+    const isTouch = window.matchMedia('(hover: none)').matches;
+    let openTimer = null;
+    let closeTimer = null;
+
+    const setActive = (card) => {
+        cards.forEach(c => {
+            const active = c === card;
+            c.classList.toggle('is-active', active);
+            c.setAttribute('aria-expanded', String(active));
+        });
+        grid.classList.add('is-engaged');
+    };
+    const clearActive = () => {
+        cards.forEach(c => { c.classList.remove('is-active'); c.setAttribute('aria-expanded', 'false'); });
+        grid.classList.remove('is-engaged');
+    };
+    const scheduleOpen = (card) => { clearTimeout(closeTimer); openTimer = setTimeout(() => setActive(card), OPEN_DELAY); };
+    const scheduleClose = () => { clearTimeout(openTimer); closeTimer = setTimeout(clearActive, CLOSE_DELAY); };
+
+    cards.forEach(card => {
+        if (!isTouch) {
+            card.addEventListener('mouseenter', () => scheduleOpen(card));
+            card.addEventListener('mouseleave', scheduleClose);
+            card.addEventListener('focusin', () => scheduleOpen(card));
+            card.addEventListener('focusout', e => { if (!card.contains(e.relatedTarget)) scheduleClose(); });
+            card.addEventListener('keydown', e => { if (e.key === 'Escape') clearActive(); });
+        } else {
+            // First tap opens the tooltip; a second tap on the link follows through,
+            // so a stray tap while scrolling doesn't send someone straight off the page.
+            card.addEventListener('click', e => {
+                if (!card.classList.contains('is-active')) { e.preventDefault(); setActive(card); }
+            });
+        }
+    });
+
+    grid.addEventListener('mouseleave', scheduleClose);
+}
+
+/* ---------- random ---------- */
+function initRandom() {
+    const btn = document.getElementById('randomBtn');
+    const foot = document.getElementById('footerRandom');
+    if (!btn) return;
+
+    const go = async (e) => {
+        if (e) e.preventDefault();
+        const lbl = btn.querySelector('.lbl');
+        const orig = lbl.textContent;
+        btn.classList.add('is-loading');
+        lbl.textContent = 'Rolling…';
+        try {
+            const data = visible(await loadData());
+            if (!data.length) throw new Error('empty');
+            const pick = data[Math.floor(Math.random() * data.length)];
+            window.open(`post.html?id=${pick.id}`, '_blank');
+        } catch (err) {
+            console.error(err);
+        } finally {
+            btn.classList.remove('is-loading');
+            lbl.textContent = orig;
+        }
+    };
+
+    btn.addEventListener('click', go);
+    if (foot) foot.addEventListener('click', go);
+}
+
+/* ---------- misc ---------- */
+function initCopyLink() {
+    const btn = document.getElementById('copyLinkBtn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            btn.classList.add('copied');
+            setTimeout(() => btn.classList.remove('copied'), 1600);
+        } catch (e) { console.warn(e); }
+    });
+}
+
+function initNavScroll() {
+    const nav = document.getElementById('topnav');
+    if (!nav) return;
+    const onScroll = () => nav.classList.toggle('is-scrolled', window.scrollY > 24);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+}
+
+function initYear() {
+    const y = document.getElementById('year');
+    if (y) y.textContent = new Date().getFullYear();
 }

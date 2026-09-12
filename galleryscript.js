@@ -1,444 +1,402 @@
-// API Configuration - Replace with your Google Sheet URL
-const API_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPkrIyHaNBs3UJdpLAa9OrGxSFzUHtxuzSPZd-aeqIff8U0KILjsYAaa5SSHNP431bIZ7Ae7aTYHnx/pub?gid=0&single=true&output=csv';
+/* ============================================================
+   CHI. — Gallery / Browse page
+   Work rail (click to select) · inline detail panel · random
+   Data: Google Sheets CSV (published)
+   ============================================================ */
+const API_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPkrIyHaNBs3UJdpLAa9OrGxSFzUHtxuzSPZd-aeqIff8U0KILjsYAaa5SSHNP431bIZ7Ae7aTYHnx/pub?gid=18930479&single=true&output=csv';
 
-// Cache for loaded data
+const THUMB_DIR = 'images/thumb/';
+const GENRES = {
+    fashion: { label: 'Fashion work' },
+    art:     { label: 'Art & design' },
+    writing: { label: 'Writing' },
+    data:    { label: 'Data & decks' }
+};
+const COLLECTION_DESC = {
+    all:     'Every visible project across fashion, art, data and writing — the full catalogue.',
+    fashion: 'Lines development, sketches, shows and upcycling — fashion as making and as system.',
+    art:     '3D multimedia, interactive visuals and generative pieces — art as experiment.',
+    writing: 'Creative, academic and opinion pieces — writing as research and voice.',
+    data:    'Case studies, dashboards and decks — data as storytelling.'
+};
+
 let portfolioData = null;
-let currentPage = 'homepage';
+let currentFilter = 'all';
+let items = [];
 
-// Page initialization
 document.addEventListener('DOMContentLoaded', () => {
-    const path = window.location.pathname;
-    
-    if (path.includes('post.html')) {
-        currentPage = 'post';
-        initPostPage();
-    } else if (path.includes('gallery.html')) {
-        currentPage = 'gallery';
-        initGalleryPage();
-    } else {
-        currentPage = 'homepage';
-        initHomepage();
-    }
+    initNavScroll();
+    initRandom();
+    initLightbox();
+    initRailArrows();
+    loadGallery();
 });
 
-// --- Homepage ---
-function initHomepage() {
-    initPagination();
-}
-
-// --- Gallery Page ---
-function initGalleryPage() {
-    const collection = new URLSearchParams(window.location.search).get('collection');
-    collection ? loadCollection(collection) : showError('No collection specified');
-}
-
-// --- Post Page ---
-function initPostPage() {
-    const postId = new URLSearchParams(window.location.search).get('id');
-    postId ? loadPost(postId) : showError('No post ID specified');
-}
-
-// --- API Functions ---
+/* ---------- data ---------- */
 async function loadData() {
     if (portfolioData) return portfolioData;
-    
-    try {
-        const response = await fetch(API_BASE_URL);
-        if (!response.ok) throw new Error('Network response was not ok');
-        
-        const csv = await response.text();
-        portfolioData = parseCSV(csv);
-        return portfolioData;
-    } catch (error) {
-        console.error('API Error:', error);
-        showError('Failed to load data');
-        return null;
-    }
+    const res = await fetch(API_BASE_URL);
+    if (!res.ok) throw new Error('Network error');
+    portfolioData = parseCSV(await res.text());
+    return portfolioData;
 }
 
-// Fast CSV parser
 function parseCSV(csv) {
-    const lines = csv.split('\n').filter(line => line.trim());
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    
+    const lines = csv.split('\n').filter(l => l.trim());
+    const headers = splitLine(lines[0]).map(h => h.trim().replace(/"/g, ''));
     return lines.slice(1).map(line => {
-        const values = [];
-        let current = '';
-        let inQuotes = false;
-        
-        for (let char of line) {
-            if (char === '"') {
-                inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-                values.push(current.trim());
-                current = '';
-            } else {
-                current += char;
-            }
-        }
-        values.push(current.trim());
-
-        return headers.reduce((obj, header, index) => {
-            obj[header] = values[index] || '';
-            return obj;
-        }, {});
+        const values = splitLine(line);
+        return headers.reduce((obj, h, i) => { obj[h] = (values[i] || '').trim(); return obj; }, {});
     });
 }
 
-// --- Gallery Functions ---
-async function loadCollection(collection) {
-    showLoading(true);
-    
-    try {
-        const data = await loadData();
-        if (!data) return;
+function splitLine(line) {
+    const values = []; let cur = '', inQ = false;
+    for (const ch of line) {
+        if (ch === '"') inQ = !inQ;
+        else if (ch === ',' && !inQ) { values.push(cur); cur = ''; }
+        else cur += ch;
+    }
+    values.push(cur);
+    return values;
+}
 
-        const items = data.filter(item => 
-            item.collection === collection && 
-            item.show?.toLowerCase() === 'y'
-        );
+const visible = items => items.filter(i => (i.show || '').toLowerCase() === 'y');
+
+/* ---------- main ---------- */
+async function loadGallery() {
+    showLoading(true);
+    try {
+        const data = visible(await loadData());
+        const params = new URLSearchParams(window.location.search);
+        const requested = (params.get('collection') || 'all').toLowerCase();
+        currentFilter = GENRES[requested] ? requested : 'all';
+        items = currentFilter === 'all' ? data : data.filter(i => i.collection === currentFilter);
+
+        updateHead();
 
         if (!items.length) {
-            showError('No items found');
+            showError('No projects in this collection yet.');
             return;
         }
 
-        updateCollectionTitle(collection);
-        renderGallery(items);
-        initGalleryPagination();
+        renderRail();
         showLoading(false);
-        
-    } catch (error) {
-        console.error('Collection Error:', error);
-        showError('Failed to load collection');
-        showLoading(false);
+
+        const requestedId = params.get('id');
+        const initial = items.find(i => i.id === requestedId) || items[0];
+        selectWork(initial, { scroll: false, updateUrl: false });
+    } catch (e) {
+        console.error(e);
+        showError('Could not load the catalogue. Check your connection and refresh.');
     }
 }
 
-function updateCollectionTitle(collection) {
-    const titles = {
-        'art': 'ART & DESIGN',
-        'fashion': 'FASHION WORK', 
-        'writing': 'WRITING',
-        'data': 'DATA & DECKS'
-    };
-    
-    const title = titles[collection] || collection.toUpperCase();
-    
+function updateHead() {
+    const title = currentFilter === 'all' ? 'Browse everything' : GENRES[currentFilter].label;
     const titleEl = document.getElementById('collectionTitle');
-    const pageEl = document.getElementById('pageTitle');
-    
-    if (titleEl) titleEl.textContent = title;
-    if (pageEl) pageEl.textContent = `Chi Hoang - ${title}`;
-}
-
-function renderGallery(items) {
-    const container = document.getElementById('galleryContainer');
-    if (!container) return;
-
-    container.innerHTML = '';
-    container.style.display = 'grid';
-    
-    // Use document fragment for better performance
-    const fragment = document.createDocumentFragment();
-    
-    items.forEach(item => {
-        const card = createCard(item);
-        fragment.appendChild(card);
-    });
-    
-    container.appendChild(fragment);
-}
-
-function createCard(item) {
-    // Debug: Log the item to see what we're working with
-    console.log('Creating card for:', item);
-    
-    const card = document.createElement('a');
-    card.href = `post.html?id=${item.id}`;
-    card.className = 'gallery-card';
-    
-    // Clean up image_main value (remove spaces, etc.)
-    const imageFolderPath = 'images/thumb/';
-    const imageFileName = item.image_main ? item.image_main.trim() : '';
-    const imageUrl = imageFileName ? `${imageFolderPath}${imageFileName}` : '';
-    
-    // Debug: Log the final image URL
-    console.log('Image URL:', imageUrl);
-    
-    card.innerHTML = `
-        <div class="gallery-card-image">
-            ${imageUrl 
-                ? `<img src="${imageUrl}" alt="${item.title}" loading="lazy" onerror="this.parentElement.innerHTML='<p>Image not found: ${imageUrl}</p>'">`
-                : '<p>No image specified</p>'
-            }
-        </div>
-        <div class="gallery-card-content">
-            <h3 class="gallery-card-title">${item.title}</h3>
-            <p class="gallery-card-description">${item.description}</p>
-            <p class="gallery-card-preview">${item.preview}</p>
-        </div>
-    `;
-    
-    return card;
-}
-
-// --- Post Functions ---
-async function loadPost(postId) {
-    showLoading(true);
-    
-    try {
-        const data = await loadData();
-        if (!data) return;
-
-        const post = data.find(item => item.id === postId);
-        
-        if (!post) {
-            showError('Post not found');
-            return;
-        }
-
-        setBackLink(post.collection);
-        renderPost(post);
-        initPostPagination();
-        showLoading(false);
-        
-    } catch (error) {
-        console.error('Post Error:', error);
-        showError('Failed to load post');
-        showLoading(false);
-    }
-}
-
-function setBackLink(collection) {
-    const backLink = document.getElementById('backToGallery');
-    if (backLink) backLink.href = `gallery.html?collection=${collection}`;
-}
-
-function renderPost(item) {
-    const content = document.getElementById('postContent');
-    const header = document.getElementById('postHeader');
-    const main = document.getElementById('postMainContent');
+    const descEl = document.getElementById('collectionDesc');
+    const crumb = document.getElementById('crumbCurrent');
     const pageTitle = document.getElementById('pageTitle');
-    
-    if (!content || !header || !main) return;
+    if (titleEl) titleEl.textContent = title;
+    if (descEl) descEl.textContent = COLLECTION_DESC[currentFilter];
+    if (crumb) crumb.textContent = title;
+    if (pageTitle) pageTitle.textContent = `Chi Hoang — ${title}`;
 
-    // Update page title
-    if (pageTitle) pageTitle.textContent = `Chi Hoang - ${item.title}`;
+    document.querySelectorAll('.topnav-links a[data-nav]').forEach(a => {
+        a.classList.toggle('active', a.dataset.nav === currentFilter);
+    });
+}
 
-    // Build HTML efficiently
+/* ---------- work rail ---------- */
+function renderRail() {
+    const rail = document.getElementById('workRail');
+    if (!rail) return;
+
+    const countEl = document.getElementById('railCount');
+    if (countEl) countEl.textContent = items.length === 1 ? '1 project' : `${items.length} projects`;
+
+    rail.innerHTML = items.map(item => {
+        const genre = GENRES[item.collection] ? item.collection : 'fashion';
+        const img = item.image_main ? THUMB_DIR + item.image_main.trim() : '';
+        return `
+            <button type="button" class="work-card" data-id="${item.id}" data-genre="${genre}" aria-pressed="false">
+                <span class="work-media">
+                    ${img ? `<img src="${img}" alt="" loading="lazy">` : ''}
+                    <span class="work-shade"></span>
+                    <span class="work-cap">
+                        <span class="work-tag"><span class="puck"></span>${GENRES[genre].label}</span>
+                        <span class="work-title">${escapeHTML(item.title)}</span>
+                    </span>
+                </span>
+            </button>`;
+    }).join('');
+
+    rail.querySelectorAll('.work-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const item = items.find(i => i.id === card.dataset.id);
+            if (item) selectWork(item, { scroll: true, updateUrl: true });
+        });
+    });
+
+    const wrap = document.getElementById('railWrap');
+    if (wrap) wrap.style.display = 'flex';
+    updateRailArrows();
+}
+
+function initRailArrows() {
+    const rail = document.getElementById('workRail');
+    const prev = document.getElementById('railPrev');
+    const next = document.getElementById('railNext');
+    if (!rail || !prev || !next) return;
+    prev.addEventListener('click', () => rail.scrollBy({ left: -rail.clientWidth * 0.85, behavior: 'smooth' }));
+    next.addEventListener('click', () => rail.scrollBy({ left: rail.clientWidth * 0.85, behavior: 'smooth' }));
+    rail.addEventListener('scroll', updateRailArrows, { passive: true });
+    window.addEventListener('resize', updateRailArrows);
+}
+
+function updateRailArrows() {
+    const rail = document.getElementById('workRail');
+    const prev = document.getElementById('railPrev');
+    const next = document.getElementById('railNext');
+    if (!rail || !prev || !next) return;
+
+    const scrollable = rail.scrollWidth > rail.clientWidth + 4;
+    prev.style.display = scrollable ? 'grid' : 'none';
+    next.style.display = scrollable ? 'grid' : 'none';
+    if (!scrollable) return;
+
+    prev.disabled = rail.scrollLeft <= 4;
+    next.disabled = rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 4;
+}
+
+/* ---------- selection → inline detail ---------- */
+function selectWork(item, opts = {}) {
+    document.querySelectorAll('.work-card').forEach(card => {
+        const active = card.dataset.id === item.id;
+        card.classList.toggle('is-active', active);
+        card.setAttribute('aria-pressed', String(active));
+    });
+
+    renderDetail(item);
+
+    if (opts.updateUrl !== false) {
+        const params = new URLSearchParams(window.location.search);
+        if (currentFilter === 'all') params.delete('collection'); else params.set('collection', currentFilter);
+        params.set('id', item.id);
+        history.replaceState(null, '', window.location.pathname + '?' + params.toString());
+    }
+
+    if (opts.scroll) {
+        const detail = document.getElementById('detail');
+        if (detail) detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function renderDetail(item) {
+    const detail = document.getElementById('detail');
+    const heroMedia = document.getElementById('detailHeroMedia');
+    const titleEl = document.getElementById('detailTitle');
+    const metaEl = document.getElementById('detailMeta');
+    const main = document.getElementById('detailMain');
+    if (!detail || !main) return;
+
+    const genre = GENRES[item.collection] ? item.collection : 'fashion';
+
+    document.title = `Chi Hoang — ${item.title}`;
+    if (titleEl) titleEl.textContent = item.title;
+    if (metaEl) {
+        metaEl.innerHTML =
+            `<span class="genre">${GENRES[genre].label}</span>` +
+            `<span class="sep">◆</span><span>Project</span>` +
+            (item.category ? `<span class="sep">◆</span><span>${escapeHTML(item.category)}</span>` : '');
+    }
+
+    let heroSrc = '';
+    for (let i = 1; i <= 20 && !heroSrc; i++) {
+        if (item[`pic${i}`]) heroSrc = `images/${item[`pic${i}`]}`;
+    }
+    if (!heroSrc && item.image_main) heroSrc = THUMB_DIR + item.image_main.trim();
+    if (heroMedia) heroMedia.innerHTML = heroSrc ? `<img src="${heroSrc}" alt="">` : '';
+
     let html = '';
-    
-    // Header
-    header.innerHTML = `
-        <h1 class="post-title">${item.title}</h1>
-        <div class="post-meta">${item.category || item.collection || ''}</div>
-    `;
+    if (item.description) html += `<p class="post-lead">${escapeHTML(item.description)}</p>`;
 
-    // Description
-    if (item.description) {
-        html += `<p>${item.description}</p>`;
+    const embedRaw = (item.embed || item.Embed || '').trim().replace(/^["']|["']$/g, '');
+    if (embedRaw) {
+        const embedHTML = buildEmbed(embedRaw);
+        if (embedHTML) html += `<div class="post-embed">${embedHTML}</div>`;
     }
-    
-    // Embeds
-    if (item.Embed) {
-        if (item.Embed.includes('youtube') || item.Embed.includes('youtu.be')) {
-            html += `<div style="margin: 2rem 0;"><iframe src="${item.Embed}" frameborder="0" allowfullscreen style="width: 100%; height: 400px; border-radius: 4px;"></iframe></div>`;
-        } else if (item.Embed.includes('<')) {
-            html += `<div style="margin: 2rem 0;">${item.Embed}</div>`;
-        }
+
+    if (item.links) {
+        const links = item.links.split(',').map(s => s.trim()).filter(Boolean);
+        html += `<div class="post-links">` + links.map(entry => {
+            if (entry.includes('__')) {
+                const [display, url] = entry.split('__').map(s => s.trim());
+                return `<a class="btn-pill" href="${url}" target="_blank" rel="noopener noreferrer">↗ ${escapeHTML(display)}</a>`;
+            }
+            return `<a class="btn-pill" href="${entry}" target="_blank" rel="noopener noreferrer">↗ ${escapeHTML(entry)}</a>`;
+        }).join('') + `</div>`;
     }
-    
-    // Long content
+
     if (item.content) {
-        html += `<div>${item.content.replace(/\n/g, '<br>')}</div>`;
+        html += `<div class="post-long-content">${linkify(escapeHTML(item.content).replace(/\n/g, '<br>'))}</div>`;
     }
-    
-    // Tools
+
     if (item.tools) {
         html += `
             <div class="post-tools">
-                <h3>Tools Used</h3>
-                <p>${item.tools}</p>
-            </div>
-        `;
+                <h3>Tools used</h3>
+                <p>${escapeHTML(item.tools)}</p>
+            </div>`;
     }
-    
-    // Links
-    if (item.links) {
-        const links = item.links.split(',').map(link => 
-            `<a href="${link.trim()}" target="_blank">${link.trim()}</a>`
-        ).join('');
-        html += `<div class="post-links">${links}</div>`;
-    }
-    
-    // Images with captions
-    for (let i = 1; i <= 5; i++) {
-        const img = item[`pic${i}`];
+
+    let i = 1;
+    while (item[`pic${i}`]) {
+        const imgPath = `images/${item[`pic${i}`]}`;
         const cap = item[`cap${i}`];
-        
-        if (img) {
-            html += `
-                <img src="${img}" alt="Project Image ${i}" class="post-image" loading="lazy">
-                ${cap ? `<p class="post-caption">${cap}</p>` : ''}
-            `;
-        }
+        html += `
+            <figure class="post-figure">
+                <img src="${imgPath}" alt="${escapeAttr(cap || `Project image ${i}`)}" class="post-image" loading="lazy">
+                ${cap ? `<figcaption class="post-caption">${escapeHTML(cap)}</figcaption>` : ''}
+            </figure>`;
+        i++;
     }
 
     main.innerHTML = html;
-    content.style.display = 'block';
+    detail.style.display = 'block';
+    setTimeout(scaleEmbeds, 60);
 }
 
-// --- Pagination Functions ---
-function initPagination() {
-    if (currentPage !== 'homepage') return;
-    
-    const main = document.getElementById('mainContent');
-    const dots = document.querySelectorAll('.dot');
-    const projects = document.querySelectorAll('.project');
-    
-    if (!main || !dots.length || !projects.length) return;
-
-    // Scroll handler with throttling
-    let scrollTimeout;
-    main.addEventListener('scroll', () => {
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            const threshold = main.getBoundingClientRect().top + (main.clientHeight * 0.2);
-            const currentIndex = Array.from(projects).findIndex(project => 
-                project.getBoundingClientRect().top > threshold
-            ) - 1;
-            
-            const activeIndex = Math.max(0, currentIndex);
-            dots.forEach((dot, i) => dot.classList.toggle('active', i === activeIndex));
-        }, 50);
-    });
-
-    // Click handlers
-    dots.forEach((dot, i) => {
-        dot.addEventListener('click', () => {
-            const project = projects[i];
-            if (project) {
-                const rect = project.getBoundingClientRect();
-                const containerRect = main.getBoundingClientRect();
-                const scrollTarget = main.scrollTop + rect.top - containerRect.top;
-                main.scrollTo({ top: scrollTarget, behavior: 'smooth' });
-            }
-        });
-    });
-}
-
-function initGalleryPagination() {
-    if (currentPage !== 'gallery') return;
-    
-    const cards = document.querySelectorAll('.gallery-card');
-    const pagination = document.getElementById('pagination');
-    
-    if (!pagination || !cards.length) return;
-    
-    pagination.innerHTML = '';
-    
-    // Create dots efficiently
-    const fragment = document.createDocumentFragment();
-    cards.forEach((card, i) => {
-        const dot = document.createElement('div');
-        dot.className = 'dot' + (i === 0 ? ' active' : '');
-        dot.addEventListener('click', () => {
-            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
-        fragment.appendChild(dot);
-    });
-    pagination.appendChild(fragment);
-    
-    // Scroll handler
-    let scrollTimeout;
-    const main = document.getElementById('mainContent');
-    if (main) {
-        main.addEventListener('scroll', () => {
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                const threshold = main.getBoundingClientRect().top + (main.clientHeight * 0.3);
-                const currentIndex = Array.from(cards).findIndex(card => 
-                    card.getBoundingClientRect().top > threshold
-                ) - 1;
-                
-                const activeIndex = Math.max(0, currentIndex);
-                const dots = pagination.querySelectorAll('.dot');
-                dots.forEach((dot, i) => dot.classList.toggle('active', i === activeIndex));
-            }, 50);
-        });
+/* ---------- embeds ---------- */
+function buildEmbed(embedContent) {
+    if (/youtube\.com|youtu\.be/.test(embedContent)) {
+        let videoId = '';
+        if (embedContent.includes('watch?v=')) videoId = embedContent.split('v=')[1]?.split('&')[0] || '';
+        else if (embedContent.includes('youtu.be/')) videoId = embedContent.split('youtu.be/')[1]?.split('?')[0] || '';
+        else if (embedContent.includes('embed/')) videoId = embedContent.split('embed/')[1]?.split('?')[0] || '';
+        if (videoId) {
+            return `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+        }
     }
+    if (embedContent.includes('<iframe')) {
+        const m = embedContent.match(/src\s*=\s*["']([^"']+)["']/i) || embedContent.match(/src\s*=\s*([^\s>]+)/i);
+        if (m) {
+            return `<iframe src="${m[1]}" frameborder="0" allowfullscreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+        }
+        return embedContent;
+    }
+    if (/^https?:\/\//i.test(embedContent)) {
+        return `<iframe src="${embedContent}" frameborder="0" allowfullscreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+    }
+    if (embedContent.includes('<')) return embedContent;
+    return '';
 }
 
-function initPostPagination() {
-    if (currentPage !== 'post') return;
-    
-    const images = document.querySelectorAll('.post-image');
-    const pagination = document.getElementById('pagination');
-    
-    if (!pagination || !images.length) {
-        if (pagination) pagination.style.display = 'none';
-        return;
-    }
-    
-    pagination.innerHTML = '';
-    
-    // Create dots for images
-    const fragment = document.createDocumentFragment();
-    images.forEach((img, i) => {
-        const dot = document.createElement('div');
-        dot.className = 'dot' + (i === 0 ? ' active' : '');
-        dot.addEventListener('click', () => {
-            img.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
-        fragment.appendChild(dot);
+function scaleEmbeds() {
+    const baseWidth = 1920;
+    document.querySelectorAll('.post-embed').forEach(container => {
+        const iframe = container.querySelector('iframe');
+        if (!iframe) return;
+        const scale = container.offsetWidth / baseWidth;
+        iframe.style.transform = `scale(${Math.min(scale, 1)})`;
     });
-    pagination.appendChild(fragment);
-    
-    // Scroll handler
-    let scrollTimeout;
-    const main = document.getElementById('mainContent');
-    if (main) {
-        main.addEventListener('scroll', () => {
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                const threshold = main.getBoundingClientRect().top + (main.clientHeight * 0.3);
-                const currentIndex = Array.from(images).findIndex(img => 
-                    img.getBoundingClientRect().top > threshold
-                ) - 1;
-                
-                const activeIndex = Math.max(0, currentIndex);
-                const dots = pagination.querySelectorAll('.dot');
-                dots.forEach((dot, i) => dot.classList.toggle('active', i === activeIndex));
-            }, 50);
-        });
-    }
+}
+window.addEventListener('resize', scaleEmbeds);
+
+/* ---------- lightbox ---------- */
+function initLightbox() {
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lbImg');
+    const close = document.getElementById('lbClose');
+    if (!lb) return;
+
+    document.addEventListener('click', e => {
+        const img = e.target.closest('.post-image');
+        if (img) {
+            lbImg.src = img.src;
+            lbImg.alt = img.alt;
+            lb.classList.add('open');
+            lb.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+    });
+    const shut = () => {
+        lb.classList.remove('open');
+        lb.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    };
+    if (close) close.addEventListener('click', shut);
+    lb.addEventListener('click', e => { if (e.target === lb) shut(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') shut(); });
 }
 
-// --- UI Helpers ---
+/* ---------- random ---------- */
+function initRandom() {
+    const btn = document.getElementById('randomBtn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+        const lbl = btn.querySelector('.lbl');
+        const orig = lbl.textContent;
+        btn.classList.add('is-loading');
+        lbl.textContent = 'Rolling…';
+        try {
+            const data = visible(await loadData());
+            if (!data.length) throw new Error('empty');
+            const pick = data[Math.floor(Math.random() * data.length)];
+            window.location.href = `post.html?id=${pick.id}`;
+        } catch (e) {
+            console.error(e);
+        } finally {
+            btn.classList.remove('is-loading');
+            lbl.textContent = orig;
+        }
+    });
+}
+
+/* ---------- ui helpers ---------- */
+function initNavScroll() {
+    const nav = document.getElementById('topnav');
+    if (!nav) return;
+    const onScroll = () => nav.classList.toggle('is-scrolled', window.scrollY > 24);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+}
+
 function showLoading(show) {
     const loading = document.getElementById('loadingState');
     const error = document.getElementById('errorState');
-    const content = currentPage === 'post' ? 
-        document.getElementById('postContent') : 
-        document.getElementById('galleryContainer');
-    
+    const wrap = document.getElementById('railWrap');
+    const detail = document.getElementById('detail');
     if (loading) loading.style.display = show ? 'block' : 'none';
-    if (error) error.style.display = 'none';
-    if (content) content.style.display = show ? 'none' : 'block';
+    if (show && error) error.style.display = 'none';
+    if (show && wrap) wrap.style.display = 'none';
+    if (show && detail) detail.style.display = 'none';
 }
 
-function showError(message) {
+function showError(msg) {
     const loading = document.getElementById('loadingState');
     const error = document.getElementById('errorState');
-    const content = currentPage === 'post' ? 
-        document.getElementById('postContent') : 
-        document.getElementById('galleryContainer');
-    
+    const wrap = document.getElementById('railWrap');
+    const detail = document.getElementById('detail');
     if (loading) loading.style.display = 'none';
+    if (wrap) wrap.style.display = 'none';
+    if (detail) detail.style.display = 'none';
     if (error) {
         error.style.display = 'block';
-        error.innerHTML = `<p>${message}</p>`;
+        error.innerHTML = `<p>${escapeHTML(msg)}</p>`;
     }
-    if (content) content.style.display = 'none';
+}
+
+function escapeHTML(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escapeAttr(s) { return escapeHTML(s).replace(/"/g, '&quot;'); }
+
+/* turn bare URLs in text into links */
+function linkify(text) {
+    return text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
 }
