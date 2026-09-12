@@ -313,7 +313,7 @@ img { display: block; max-width: 100%; }
     inset: 0;
     z-index: -1;
     background:
-        linear-gradient(to top, var(--bg) 2%, rgba(19,16,17,.75) 32%, rgba(19,16,17,.15) 62%, rgba(19,16,17,.45) 100%),
+        linear-gradient(to top, rgba(19,16,17,.75) 32%, rgba(19,16,17,.45) 100%),
         linear-gradient(to right, rgba(19,16,17,.9), rgba(19,16,17,.25) 55%, transparent 80%);
 }
 
@@ -553,9 +553,7 @@ img { display: block; max-width: 100%; }
     text-transform: uppercase;
     color: var(--blush);
 }
-.reel-card[data-genre="art"]     .reel-tag { color: var(--lilac-deep); }
-.reel-card[data-genre="writing"] .reel-tag { color: var(--olive-deep); }
-.reel-card[data-genre="data"]    .reel-tag { color: var(--mint-deep); }
+
 .reel-title {
     font-family: var(--display);
     font-weight: 500;
@@ -837,9 +835,7 @@ img { display: block; max-width: 100%; }
     font-size: .58rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
     color: var(--blush);
 }
-.work-card[data-genre="art"]     .work-tag { color: var(--lilac-deep); }
-.work-card[data-genre="writing"] .work-tag { color: var(--olive-deep); }
-.work-card[data-genre="data"]    .work-tag { color: var(--mint-deep); }
+
 .work-title {
     font-family: var(--display);
     font-weight: 500;
