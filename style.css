@@ -639,7 +639,7 @@ img { display: block; max-width: 100%; }
    ============================================================ */
 .footer {
     border-top: 1px solid var(--line);
-    background: linear-gradient(to bottom, var(--surface-2), var(--bg));
+    background: linear-gradient(to bottom, var(--surface-2), var(--pink-glow));
     padding: 4rem clamp(1rem, 4vw, 3.5rem) 2.6rem;
     position: relative;
     z-index: 1;
