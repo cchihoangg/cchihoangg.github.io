@@ -18,8 +18,8 @@
 
     /* page text (on light surfaces) */
     --text:     #2b211d;
-    --text-2:   #6b5750;
-    --muted:    #9c8880;
+    --text-2:   #654c43;
+    --muted:    #765a50;
 
     /* text/icons overlaid directly on photos (kept light — photos always carry a dark scrim) */
     --on-media:   #fbf3f0;
