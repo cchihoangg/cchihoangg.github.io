@@ -50,7 +50,7 @@
     </header>
 
     <!-- ===== HERO ===== -->
-    <section class="hero" id="hero" aria-label="Featured project">
+    <section class="hero" id="hero" aria-label="Featured project" data-ids="vogueau","fame20263", "patagonia", "upcycling">
         <div class="hero-media" id="heroMedia"  href="#"><!-- slide img injected --></div>
         <div class="hero-fade"></div>
 
@@ -98,78 +98,12 @@
 
             <div class="reel-grid" id="reelGrid">
 
-                <article class="reel-card" aria-expanded="false" aria-describedby="reel-detail-vogueau" data-id="vogueau" data-genre="writing">
-                    <a class="reel-media" href="gallery.html?collection=writing&amp;id=vogueau" target="_blank" rel="noopener noreferrer" aria-label="Open Internship at Vogue Australia">
-                        <img src="images/featured/vogue featured.png" alt="Vogue Australia">
-                        <div class="reel-shade"></div>
-                        <span class="work-open" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
-                        </span>
-                        <div class="reel-cap">
-                            <span class="reel-tag"><span class="puck"></span>Writing</span>
-                            <h3 class="reel-title">Internship at Vogue Australia</h3>
-                        </div>
-                    </a>
-                    <div class="reel-detail" id="reel-detail-vogueau">
-                        <p class="reel-desc">Exploring the clean-girl aesthetic as a cultural "norm" — tracing how effort shapes the idea of effortlessness, from rigorous pitching to commercial work with Gladys Lai and Nina Miyashita.</p>
-                        <span class="reel-cta">View project →</span>
-                    </div>
-                </article>
-
-                <article class="reel-card" aria-expanded="false" aria-describedby="reel-detail-patagonia" data-id="patagonia" data-genre="data">
-                    <a class="reel-media" href="gallery.html?collection=data&amp;id=patagonia" target="_blank" rel="noopener noreferrer" aria-label="Open Patagonia Data Illustration">
-                        <img src="images/featured/Patagonia featured.png" alt="Patagonia Project">
-                        <div class="reel-shade"></div>
-                        <span class="work-open" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
-                        </span>
-                        <div class="reel-cap">
-                            <span class="reel-tag"><span class="puck"></span>Data &amp; Decks</span>
-                            <h3 class="reel-title">Patagonia Data Illustration</h3>
-                        </div>
-                    </a>
-                    <div class="reel-detail" id="reel-detail-patagonia">
-                        <p class="reel-desc">Published StoryMaps for Patagonia built with ESRI — a sophomore alongside three Geography seniors, building data-driven commercial web apps.</p>
-                        <p class="reel-aside"><a href="https://www.tcu.edu/news/2025/interdisciplinary-innovation-tcu-undergraduates-collaborate-with-patagonia-books-using-gis-technology.php" target="_blank" rel="noopener noreferrer">See the TCU feature</a> — Rianne says I'm a senior, I'm not.</p>
-                        <span class="reel-cta">View project →</span>
-                    </div>
-                </article>
-
-                <article class="reel-card" aria-expanded="false" aria-describedby="reel-detail-strada" data-id="fame20263" data-genre="fashion">
-                    <a class="reel-media" href="gallery.html?collection=fashion&amp;id=fame20263" target="_blank" rel="noopener noreferrer" aria-label="Open Collina Strada: Geo-Logic Capsule">
-                        <img src="images/featured/strada featured.png" alt="Collina Strada AW 26/27 Geo-Logic Capsule">
-                        <div class="reel-shade"></div>
-                        <span class="work-open" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
-                        </span>
-                        <div class="reel-cap">
-                            <span class="reel-tag"><span class="puck"></span>Fashion</span>
-                            <h3 class="reel-title">Collina Strada: Geo-Logic Capsule</h3>
-                        </div>
-                    </a>
-                    <div class="reel-detail" id="reel-detail-strada">
-                        <p class="reel-desc">A sustainable six-piece capsule interpreting WGSN's "Geo-Logic" macro-trend — playful, organic ideas merged with technical accuracy and eco-friendly sourcing.</p>
-                        <span class="reel-cta">View project →</span>
-                    </div>
-                </article>
-
-                <article class="reel-card" aria-expanded="false" aria-describedby="reel-detail-upcycling" data-id="upcycling" data-genre="fashion">
-                    <a class="reel-media" href="gallery.html?collection=fashion&amp;id=upcycling" target="_blank" rel="noopener noreferrer" aria-label="Open Upcycled!">
-                        <img src="images/featured/upcycle featured.png" alt="Upcycling Project">
-                        <div class="reel-shade"></div>
-                        <span class="work-open" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
-                        </span>
-                        <div class="reel-cap">
-                            <span class="reel-tag"><span class="puck"></span>Fashion</span>
-                            <h3 class="reel-title">Upcycled!</h3>
-                        </div>
-                    </a>
-                    <div class="reel-detail" id="reel-detail-upcycling">
-                        <p class="reel-desc">Late nights sewing, draping, and problem-solving into twelve documented pieces — enough to land a spot on national television.</p>
-                        <span class="reel-cta">View project →</span>
-                    </div>
-                </article>
+                <!-- Each card just needs its id — homepage.js looks up the matching
+                     row in the sheet and fills in title, genre, image and synopsis. -->
+                <article class="reel-card" data-id="vogueau"></article>
+                <article class="reel-card" data-id="patagonia"></article>
+                <article class="reel-card" data-id="fame20263"></article>
+                <article class="reel-card" data-id="upcycling"></article>
 
             </div>
         </section>
@@ -189,10 +123,14 @@
                         <li>Worked across 3 continents and speaks 4 languages</li>
                         <li>Visual intelligence, pattern recognition, systemic thinking</li>
                     </ul>
+                    <p class="footer-facts">Replace this with whatever you'd like to add here.</p>
                     <div class="footer-social">
                          <a class="btn-pill hide-sm" href="https://cchihoangg.github.io/chi_resume.pdf" target="_blank" rel="noopener noreferrer">Résumé</a>  
                         <a class="icon-btn" href="https://www.linkedin.com/in/chi-hoang-b590ba246/" aria-label="LinkedIn" target="_blank" rel="noopener noreferrer">
                             <svg viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.783-1.75-1.75s.784-1.75 1.75-1.75 1.75.783 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                        </a>
+                        <a class="icon-btn" href="https://www.behance.net/hoangmaichi0503" aria-label="Behance" target="_blank" rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 7.2h-6.6V5.4H22v1.8zM8.6 12.4c1.3-.5 2-1.5 2-2.9 0-2.5-1.9-3.5-4.4-3.5H0v14.3h6.4c2.7 0 5.1-1.3 5.1-4.1 0-1.8-1-3.1-2.9-3.8zM3 8.1h2.9c1.1 0 2 .4 2 1.6 0 1.1-.7 1.7-2 1.7H3V8.1zm3.2 9.7H3v-3.9h3.3c1.4 0 2.3.6 2.3 2 0 1.4-1 1.9-2.4 1.9zM24 15c0-3.5-2-6-5.6-6-3.4 0-5.9 2.5-5.9 6.1 0 3.6 2.4 6 6 6 2.6 0 4.5-1.2 5.4-3.5h-2.7c-.4.9-1.3 1.4-2.6 1.4-1.7 0-2.9-1.1-3-2.9h8.3c.1-.3.1-.7.1-1.1zm-8.3-1.3c.3-1.5 1.3-2.3 2.7-2.3 1.5 0 2.4.9 2.6 2.3h-5.3z"/></svg>
                         </a>
                         <a class="icon-btn" href="https://www.instagram.com/cchi_meow/" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
                              <svg 

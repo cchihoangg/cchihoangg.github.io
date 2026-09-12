@@ -937,7 +937,7 @@ img { display: block; max-width: 100%; }
 
 .post-hero {
     position: relative;
-    min-height: 46vh;
+    min-height: 60vh;
     display: flex;
     align-items: flex-end;
     padding: 2.4rem clamp(1rem, 4vw, 3.5rem) 2.4rem;
@@ -954,9 +954,9 @@ img { display: block; max-width: 100%; }
     position: absolute;
     inset: 0;
     z-index: -1;
-    background:
-        linear-gradient(to top, var(--bg) 3%, rgba(19,16,17,.8) 34%, rgba(19,16,17,.28) 66%, rgba(19,16,17,.5)),
-        linear-gradient(to right, rgba(19,16,17,.92), rgba(19,16,17,.3) 60%, transparent);
+     background:
+        linear-gradient(to top, rgba(19,16,17,.75) 32%, rgba(19,16,17,.45) 100%),
+        linear-gradient(to right, rgba(19,16,17,.9), rgba(19,16,17,.25) 55%, transparent 80%);
 }
 .post-hero-inner { max-width: 760px; }
 .post-kicker {

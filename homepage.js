@@ -1,10 +1,14 @@
 /* ============================================================
    CHI. — Homepage
    Hero slideshow · selected-work reel · random
-   Data: Google Sheets CSV (published) — used only by "Surprise me",
-   which can land on anything in the full catalogue.
+   Data: Google Sheets CSV (published) — the hero and reel both read
+   straight from it now; "Surprise me" can land on anything in it.
    ============================================================ */
 const API_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPkrIyHaNBs3UJdpLAa9OrGxSFzUHtxuzSPZd-aeqIff8U0KILjsYAaa5SSHNP431bIZ7Ae7aTYHnx/pub?gid=18930479&single=true&output=csv';
+
+// All of the sheet's image_main filenames (e.g. "vogueau_thumb.jpg") live
+// in a flat "images/" folder.
+const IMAGE_BASE = 'images/';
 
 const GENRES = {
     fashion: { label: 'Fashion work' },
@@ -13,34 +17,11 @@ const GENRES = {
     data:    { label: 'Data & decks' }
 };
 
-const HERO_IDS = ['vogueau', 'fame20263', 'patagonia', 'upcycling'];
-const HERO_META = {
-    vogueau:   { kicker: 'Featured · Editorial', sub: 'Vogue Australia' },
-    fame20263: { kicker: 'Featured · Capsule collection', sub: 'Collina Strada' },
-    patagonia: { kicker: 'Featured · Data & GIS', sub: 'Patagonia Books' },
-    upcycling: { kicker: 'Featured · Slow fashion', sub: '12 documented pieces' }
-};
-const HERO_IMGS = {
-    vogueau:   'images/featured/vogue featured.png',
-    fame20263: 'images/featured/strada featured.png',
-    patagonia: 'images/featured/Patagonia featured.png',
-    upcycling: 'images/featured/upcycle featured.png'
-};
-const HERO_TITLES = {
-    vogueau: 'Internship at Vogue Australia',
-    fame20263: 'Collina Strada AW 26/27 — Geo-Logic Capsule',
-    patagonia: 'Patagonia Data Illustration',
-    upcycling: 'Upcycled!'
-};
-const HERO_SYN = {
-    vogueau: 'The clean-girl aesthetic as a cultural "norm" — tracing how effort shapes the idea of effortlessness. Daily editorial work, from pitching to commercial, with Gladys Lai and Nina Miyashita.',
-    fame20263: 'A sustainable six-piece capsule for Collina Strada interpreting the WGSN "Geo-Logic" macro-trend — playful, organic ideas merged with technical accuracy and eco-friendly sourcing.',
-    patagonia: 'Published, data-driven StoryMaps for Patagonia Books built with ESRI — a sophomore working with three geography seniors on commercial web apps that went live.',
-    upcycling: 'Late nights of sewing, draping and problem-solving turned into a slow-fashion practice — 12 documented pieces and a national television feature.'
-};
-const HERO_GENRE = { vogueau: 'writing', fame20263: 'fashion', patagonia: 'data', upcycling: 'fashion' };
-
-let portfolioData = null;
+function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     initNavScroll();
@@ -51,13 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initCopyLink();
 });
 
-/* ---------- data (only "Surprise me" needs this) ---------- */
-async function loadData() {
-    if (portfolioData) return portfolioData;
-    const res = await fetch(API_BASE_URL);
-    if (!res.ok) throw new Error('Network error');
-    portfolioData = parseCSV(await res.text());
-    return portfolioData;
+/* ---------- data (shared by hero, reel, and "Surprise me") ---------- */
+let dataPromise = null;
+function loadData() {
+    if (!dataPromise) {
+        dataPromise = fetch(API_BASE_URL)
+            .then(res => { if (!res.ok) throw new Error('Network error'); return res.text(); })
+            .then(csv => parseCSV(csv))
+            .catch(err => { dataPromise = null; throw err; }); // let a later call retry on failure
+    }
+    return dataPromise;
 }
 
 function parseCSV(csv) {
@@ -83,48 +67,74 @@ function splitLine(line) {
 
 const visible = items => items.filter(i => (i.show || '').toLowerCase() === 'y');
 
-/* ---------- hero: automated slideshow, 4 dots, rotates on a timer ---------- */
-function initHero() {
+/* ---------- hero: automated slideshow, dots, rotates on a timer ----------
+   Which projects appear is set by data-ids on the <section id="hero">;
+   everything shown for each one (title, genre, image, synopsis) is pulled
+   from the matching row in the sheet. */
+async function initHero() {
+    const heroEl = document.getElementById('hero');
     const media = document.getElementById('heroMedia');
     const dotsEl = document.getElementById('heroDots');
-    if (!media || !dotsEl) return;
+    if (!heroEl || !media || !dotsEl) return;
+
+    const ids = (heroEl.dataset.ids || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (!ids.length) return;
+
+    let allItems;
+    try {
+        allItems = await loadData();
+    } catch (err) {
+        console.error('Hero: could not load project data', err);
+        return;
+    }
+    const byId = Object.fromEntries(allItems.map(it => [it.id, it]));
+    const slides = ids.map(id => byId[id]).filter(Boolean); // ids with no matching row are skipped
+    if (!slides.length) return;
 
     let idx = 0, timer = null;
 
     const paint = (i, animate = true) => {
-        const id = HERO_IDS[i];
-        media.innerHTML = `<img src="${HERO_IMGS[id]}" alt="">`;
+        const item = slides[i];
+        const genreKey = (item.collection || '').toLowerCase();
+        const genreLabel = (GENRES[genreKey] && GENRES[genreKey].label) || item.collection || '';
+        const type = item.description || ''; // sheet's short subtitle, e.g. "Internship"
+        const synopsis = item.preview || item.description || ''; // sheet's "preview" holds the long synopsis
+        const imgSrc = item.image_main ? `${IMAGE_BASE}${item.image_main}` : '';
+
+        media.innerHTML = `<img src="${escapeHtml(imgSrc)}" alt="">`;
         if (animate) {
             const img = media.querySelector('img');
             img.style.animation = 'none';
             requestAnimationFrame(() => { img.style.animation = ''; });
         }
-        document.getElementById('heroKicker').textContent = HERO_META[id].kicker;
-        document.getElementById('heroTitle').textContent = HERO_TITLES[id];
+        document.getElementById('heroKicker').textContent = 'Featured';
+        document.getElementById('heroTitle').textContent = item.title || '';
         document.getElementById('heroMeta').innerHTML =
-            `<span>${GENRES[HERO_GENRE[id]].label}</span><span class="sep">◆</span>` +
-            `<span>${HERO_META[id].sub}</span><span class="sep">◆</span><span>Project</span>`;
-        document.getElementById('heroSynopsis').textContent = HERO_SYN[id];
-        document.getElementById('heroCta').href = `post.html?id=${id}`;
-        document.getElementById('heroMore').href = `post.html?id=${id}`;
+            `<span>${escapeHtml(genreLabel)}</span><span class="sep">◆</span>` +
+            `<span>${escapeHtml(type)}</span><span class="sep">◆</span><span>Project</span>`;
+        document.getElementById('heroSynopsis').textContent = synopsis;
+        document.getElementById('heroCta').href = `post.html?id=${item.id}`;
+        const heroMoreEl = document.getElementById('heroMore');
+        if (heroMoreEl) heroMoreEl.href = `post.html?id=${item.id}`;
         dotsEl.querySelectorAll('.hdot').forEach((d, j) => {
             d.classList.toggle('active', j === i);
             d.setAttribute('aria-selected', j === i);
         });
     };
 
-    HERO_IDS.forEach((id, i) => {
+    dotsEl.innerHTML = '';
+    slides.forEach((item, i) => {
         const b = document.createElement('button');
         b.className = 'hdot' + (i === 0 ? ' active' : '');
         b.setAttribute('role', 'tab');
-        b.setAttribute('aria-label', `Show ${HERO_TITLES[id]}`);
+        b.setAttribute('aria-label', `Show ${item.title || item.id}`);
         b.addEventListener('click', () => { idx = i; paint(i); restart(); });
         dotsEl.appendChild(b);
     });
 
-    const goNext = () => { idx = (idx + 1) % HERO_IDS.length; paint(idx); restart(); };
-    const goPrev = () => { idx = (idx - 1 + HERO_IDS.length) % HERO_IDS.length; paint(idx); restart(); };
-    const restart = () => { clearInterval(timer); timer = setInterval(() => { idx = (idx + 1) % HERO_IDS.length; paint(idx); }, 7000); };
+    const goNext = () => { idx = (idx + 1) % slides.length; paint(idx); restart(); };
+    const goPrev = () => { idx = (idx - 1 + slides.length) % slides.length; paint(idx); restart(); };
+    const restart = () => { clearInterval(timer); timer = setInterval(() => { idx = (idx + 1) % slides.length; paint(idx); }, 7000); };
 
     paint(0, false);
     restart();
@@ -146,11 +156,70 @@ function initHero() {
    thumbnail holds for a beat, then opens a compact tooltip with its
    synopsis. Leaving does the same in reverse, so a passing cursor
    doesn't flicker it open or shut. */
-function initReel() {
+async function initReel() {
     const grid = document.getElementById('reelGrid');
     if (!grid) return;
 
-    const cards = Array.from(grid.querySelectorAll('.reel-card'));
+    // index.html only sets data-id on each card now — everything else
+    // (title, genre, image, synopsis) is pulled from the matching sheet row.
+    const cardEls = Array.from(grid.querySelectorAll('.reel-card[data-id]'));
+    if (!cardEls.length) return;
+
+    let items;
+    try {
+        items = await loadData();
+    } catch (err) {
+        console.error('Reel: could not load project data', err);
+        return;
+    }
+    const byId = Object.fromEntries(items.map(it => [it.id, it]));
+
+    const liveCards = [];
+    cardEls.forEach(card => {
+        const item = byId[card.dataset.id];
+        if (!item) { card.remove(); return; } // id in the HTML no longer matches a row — drop the slot
+        paintReelCard(card, item);
+        liveCards.push(card);
+    });
+
+    wireReelInteractions(grid, liveCards);
+}
+
+// NOTE on the sheet's column names: "preview" actually holds the long
+// synopsis text, and "image_main" actually holds the thumbnail filename.
+// "description" is really just a short subtitle (e.g. "Internship").
+function paintReelCard(card, item) {
+    const genreKey = (item.collection || '').toLowerCase();
+    const genreLabel = (GENRES[genreKey] && GENRES[genreKey].label) || item.collection || '';
+    const title = item.title || '';
+    const synopsis = item.preview || item.description || '';
+    const imgSrc = item.image_main ? `${IMAGE_BASE}${item.image_main}` : '';
+    const detailId = `reel-detail-${item.id}`;
+
+    card.dataset.genre = genreKey;
+    card.setAttribute('aria-describedby', detailId);
+    card.setAttribute('aria-expanded', 'false');
+
+    card.innerHTML = `
+        <a class="reel-media" href="gallery.html?collection=${encodeURIComponent(genreKey)}&id=${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${escapeHtml(title)}">
+            <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(title)}">
+            <div class="reel-shade"></div>
+            <span class="work-open" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+            </span>
+            <div class="reel-cap">
+                <span class="reel-tag"><span class="puck"></span>${escapeHtml(genreLabel)}</span>
+                <h3 class="reel-title">${escapeHtml(title)}</h3>
+            </div>
+        </a>
+        <div class="reel-detail" id="${detailId}">
+            <p class="reel-desc">${escapeHtml(synopsis)}</p>
+            <span class="reel-cta">View project →</span>
+        </div>
+    `;
+}
+
+function wireReelInteractions(grid, cards) {
     const OPEN_DELAY = 320;
     const CLOSE_DELAY = 220;
     const isTouch = window.matchMedia('(hover: none)').matches;
