@@ -214,6 +214,34 @@ img { display: block; max-width: 100%; }
 .topnav-links a.active::after { right: 0; }
 .topnav-links a.active { color: var(--text); }
 
+/* "Projects" group — plain inline links on desktop; collapses into a
+   dropdown menu on phone (see RESPONSIVE section below) */
+.nav-projects { position: relative; display: flex; align-items: center; }
+.nav-projects-menu {
+    display: flex;
+    gap: 1.6rem;
+    align-items: center;
+}
+.nav-projects-toggle {
+    display: none;
+    align-items: center;
+    gap: .35rem;
+    background: none;
+    border: none;
+    padding: .35rem 0;
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--text-2);
+    cursor: pointer;
+}
+.nav-projects-toggle:hover { color: var(--text); }
+.nav-projects-toggle .chev { width: 13px; height: 13px; transition: transform .2s; }
+.nav-projects.is-open .nav-projects-toggle .chev { transform: rotate(180deg); }
+.nav-projects.is-open .nav-projects-toggle { color: var(--text); }
+
 /* pill button */
 .btn-pill {
     display: inline-flex;
@@ -1153,6 +1181,31 @@ img { display: block; max-width: 100%; }
     .nav-extra .hide-sm { display: none; }
     .row-head { flex-wrap: wrap; }
     .page-head-grid { grid-template-columns: 1fr; gap: .6rem; }
+
+    /* the 4 gallery links collapse into a single "Projects" dropdown */
+    .nav-projects-toggle { display: inline-flex; }
+    .nav-projects-menu {
+        display: none;
+        position: absolute;
+        top: calc(100% + .7rem);
+        right: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        min-width: 190px;
+        padding: .5rem 0;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        box-shadow: 0 12px 30px rgba(19,16,17,.16);
+        z-index: 200;
+    }
+    .nav-projects.is-open .nav-projects-menu { display: flex; }
+    .nav-projects-menu a {
+        padding: .65rem 1.1rem;
+        white-space: nowrap;
+    }
+    .nav-projects-menu a::after { display: none; }
 }
 
 @media (max-width: 560px) {

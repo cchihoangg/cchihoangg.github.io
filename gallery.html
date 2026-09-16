@@ -18,10 +18,19 @@
 
         <nav class="topnav-links" aria-label="Collections">
             <a href="index.html">Featured</a>
-            <a href="gallery.html?collection=fashion" data-nav="fashion">Fashion</a>
-            <a href="gallery.html?collection=art" data-nav="art">Art &amp; Design</a>
-            <a href="gallery.html?collection=writing" data-nav="writing">Writing</a>
-            <a href="gallery.html?collection=data" data-nav="data">Data &amp; Decks</a>
+
+            <div class="nav-projects" id="navProjects">
+                <button class="nav-projects-toggle" id="projectsToggle" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="projectsMenu">
+                    Projects
+                    <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="nav-projects-menu" id="projectsMenu" role="menu">
+                    <a href="gallery.html?collection=fashion" data-nav="fashion" role="menuitem">Fashion</a>
+                    <a href="gallery.html?collection=art" data-nav="art" role="menuitem">Art &amp; Design</a>
+                    <a href="gallery.html?collection=writing" data-nav="writing" role="menuitem">Writing</a>
+                    <a href="gallery.html?collection=data" data-nav="data" role="menuitem">Data &amp; Decks</a>
+                </div>
+            </div>
         </nav>
 
         <a class="nav-profile" href="index.html#about" aria-label="About Chi Hoang">

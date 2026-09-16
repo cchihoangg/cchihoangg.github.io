@@ -25,6 +25,7 @@ function escapeHtml(str) {
 
 document.addEventListener('DOMContentLoaded', () => {
     initNavScroll();
+    initProjectsMenu();
     initYear();
     initHero();
     initReel();
@@ -310,6 +311,36 @@ function initNavScroll() {
     const onScroll = () => nav.classList.toggle('is-scrolled', window.scrollY > 24);
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
+}
+
+/* ---------- phone nav: "Projects" dropdown ----------
+   On phone widths the four gallery links (Fashion / Art & Design /
+   Writing / Data & Decks) collapse behind a single "Projects" toggle
+   (see the .nav-projects rules in style.css). Above that breakpoint
+   the same markup just renders as a plain inline link row, so this
+   only needs to manage the open/closed state. */
+function initProjectsMenu() {
+    const wrap = document.getElementById('navProjects');
+    const toggle = document.getElementById('projectsToggle');
+    const menu = document.getElementById('projectsMenu');
+    if (!wrap || !toggle || !menu) return;
+
+    const close = () => {
+        wrap.classList.remove('is-open');
+        toggle.setAttribute('aria-expanded', 'false');
+    };
+    const open = () => {
+        wrap.classList.add('is-open');
+        toggle.setAttribute('aria-expanded', 'true');
+    };
+
+    toggle.addEventListener('click', e => {
+        e.stopPropagation();
+        wrap.classList.contains('is-open') ? close() : open();
+    });
+    document.addEventListener('click', e => { if (!wrap.contains(e.target)) close(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    window.addEventListener('resize', () => { if (window.innerWidth > 820) close(); });
 }
 
 function initYear() {
