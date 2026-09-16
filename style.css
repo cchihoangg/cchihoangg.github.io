@@ -219,6 +219,7 @@ img { display: block; max-width: 100%; }
 .nav-projects { position: relative; display: flex; align-items: center; }
 .nav-projects-menu {
     display: flex;
+    flex-wrap: wrap;
     gap: 1.6rem;
     align-items: center;
 }
