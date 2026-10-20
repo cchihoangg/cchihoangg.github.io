@@ -54,7 +54,7 @@
 
         let active = null, openTimer = 0, closeTimer = 0, renderedKey = '';
 
-        Chi.loadProjects().then(all => {
+        const apply = all => {
             const visible = all.filter(p => p.visible);
             info.forEach((rec, link) => {
                 const ids = (link.dataset.featured || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -65,8 +65,11 @@
                 if (rec.item && rec.item.thumb) { const im = new Image(); im.src = rec.item.thumb; } // warm the cache
                 describe(link, rec);
             });
-            if (active) { renderedKey = ''; render(active); place(active); }
-        }).catch(err => {
+            renderedKey = '';
+            if (active) { render(active); place(active); }
+        };
+        Chi.onProjectsUpdate(apply);
+        Chi.loadProjects().then(apply).catch(err => {
             console.warn('Landing: project data unavailable, cards show category notes only.', err);
             info.forEach(rec => { rec.ready = true; });
         });

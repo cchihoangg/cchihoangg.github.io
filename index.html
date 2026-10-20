@@ -12,7 +12,10 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23ebe9e6'/%3E%3Ccircle cx='32' cy='32' r='15' fill='%23cc4dbb'/%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&display=swap">
+    <link rel="preconnect" href="https://docs.google.com" crossorigin>
+    <!-- fonts load without blocking the first paint; text shows in a fallback face, then swaps -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&display=swap"></noscript>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="page-landing">
@@ -60,7 +63,28 @@
             <div class="about-body">
                 <p class="eyebrow">About</p>
                 <h2 class="about-title" id="aboutTitle">A culture-oriented, analytical mind.</h2>
-                <p class="about-lead">I read culture through data and make things from what I find: fashion lines and runway shows, interactive maps and dashboards, essays and editorial. Each project starts with a cultural question and ends in something people can see, use or read.</p>
+                <p class="about-lead">Every project starts with a cultural question. The answer takes one of three forms.</p>
+
+                <ol class="pillars">
+                    <li><a href="gallery.html?collection=design">
+                        <span class="pillar-num">01</span>
+                        <span class="pillar-name">Design</span>
+                        <span class="pillar-verb">makes culture visible</span>
+                        <span class="pillar-what">Fashion lines, runway, upcycling, 3D and interactive work</span>
+                    </a></li>
+                    <li><a href="gallery.html?collection=writing">
+                        <span class="pillar-num">02</span>
+                        <span class="pillar-name">Writing</span>
+                        <span class="pillar-verb">makes culture legible</span>
+                        <span class="pillar-what">Editorial, cultural analysis and research</span>
+                    </a></li>
+                    <li><a href="gallery.html?collection=strategy">
+                        <span class="pillar-num">03</span>
+                        <span class="pillar-name">Strategy</span>
+                        <span class="pillar-verb">makes culture actionable</span>
+                        <span class="pillar-what">Case studies, dashboards and data stories</span>
+                    </a></li>
+                </ol>
 
                 <dl class="facts">
                     <div><dt>Studying</dt><dd>B.S. Digital Culture &amp; Data Analytics and B.S. Fashion Merchandising, minor in Writing. TCU, May 2027.</dd></div>

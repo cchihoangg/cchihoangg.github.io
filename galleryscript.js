@@ -42,6 +42,13 @@
             const all = await Chi.loadProjects({ force });
             state.projects = all.filter(p => p.visible);
             route();
+            // a newer copy of the sheet arrived after we rendered from the saved one
+            Chi.onProjectsUpdate(fresh => {
+                state.projects = fresh.filter(p => p.visible);
+                const y = window.scrollY;
+                route({ quiet: true });
+                window.scrollTo({ top: y, behavior: 'instant' });
+            });
         } catch (err) {
             console.error('Gallery: could not load the sheet.', err);
             renderError();
@@ -73,15 +80,15 @@
         if (state.view === 'index' && state.key) state.scroll.set(state.key, window.scrollY);
     }
 
-    function route() {
+    function route(opts = {}) {
         if (!state.projects.length) { renderEmpty(); return; }
         const params = new URLSearchParams(location.search);
         const id = params.get('id');
         const cat = Chi.resolveCategory(params.get('collection'));
         const item = id ? state.projects.find(p => p.id === id) : null;
 
-        if (item) renderProject(item);
-        else renderIndex(cat, id ? 'That project isn’t available right now. Here’s the rest of the work.' : '');
+        if (item) renderProject(item, opts.quiet);
+        else renderIndex(cat, id ? 'That project isn’t available right now. Here’s the rest of the work.' : '', opts.quiet);
 
         // Tidy old-style or stale URLs (?collection=fashion, unknown ids)
         // into the canonical form, without adding a history entry.
@@ -108,10 +115,11 @@ const inCat = cat => {
         });
     }
 
-    function swap(html, focus) {
+    function swap(html, focus, quiet) {
         const view = $('#view');
         view.classList.remove('is-entering');
         view.innerHTML = html;
+        if (quiet) return;
         void view.offsetWidth; // restart the entrance animation
         view.classList.add('is-entering');
         if (focus) view.focus({ preventScroll: true });
@@ -120,7 +128,7 @@ const inCat = cat => {
     /* ---------- index ---------- */
     function card(p, i) {
         const media = p.thumb
-            ? `<img src="${esc(p.thumb)}" alt="" loading="${i < 6 ? 'eager' : 'lazy'}" decoding="async">`
+            ? `<img src="${esc(p.thumb)}" alt="" loading="${i < 6 ? 'eager' : 'lazy'}"${i < 3 ? ' fetchpriority="high"' : ''} decoding="async">`
             : '';
         return `
             <a class="card" href="${esc(p.url)}" data-route style="--i:${Math.min(i, 12)}">
@@ -131,7 +139,7 @@ const inCat = cat => {
             </a>`;
     }
 
-    function renderIndex(cat, notice) {
+    function renderIndex(cat, notice, quiet) {
         const fromProject = state.view === 'project';
         state.view = 'index';
         state.key = `index:${cat || 'all'}`;
@@ -179,7 +187,8 @@ const inCat = cat => {
                 }).join('')}`;
         }
 
-        swap(html, fromProject);
+        swap(html, fromProject, quiet);
+        if (quiet) return;
         const y = state.scroll.get(state.key) || 0;
         requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'instant' }));
     }
@@ -190,13 +199,13 @@ const inCat = cat => {
         const alt = f.cap && !long ? Chi.tidy(f.cap).replace(/<[^>]+>/g, '') : `${title}, image ${n + 1}`;
         return `
             <figure class="fig${hero ? ' fig-hero' : ''}" data-media>
-                <img class="zoomable" src="${esc(f.src)}" alt="${esc(alt)}" loading="${hero ? 'eager' : 'lazy'}" decoding="async">
+                <img class="zoomable" src="${esc(f.src)}" alt="${esc(alt)}" loading="${hero ? 'eager' : 'lazy'}"${hero ? ' fetchpriority="high"' : ''} decoding="async">
                 ${f.cap && !long ? `<figcaption>${rich(f.cap).replace(/^<p>|<\/p>$/g, '')}</figcaption>` : ''}
             </figure>
             ${long ? `<div class="prose fig-note">${rich(f.cap)}</div>` : ''}`;
     }
 
-    function renderProject(item) {
+    function renderProject(item, quiet) {
         state.view = 'project';
         state.key = `project:${item.id}`;
         state.currentId = item.id;
@@ -252,9 +261,9 @@ const inCat = cat => {
                 ${item.tools ? `<aside class="prose tools"><p class="eyebrow">Tools</p><p>${esc(item.tools)}</p></aside>` : ''}
                 ${figs.map((f, n) => figure(f, n + 1, item.title, false)).join('')}
                 ${pager}
-            </article>`, true);
+            </article>`, !quiet, quiet);
 
-        window.scrollTo({ top: 0, behavior: 'instant' });
+        if (!quiet) window.scrollTo({ top: 0, behavior: 'instant' });
         setupEmbeds();
         state.images = Array.from(document.querySelectorAll('#view img.zoomable'));
     }
