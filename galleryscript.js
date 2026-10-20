@@ -1,531 +1,451 @@
 /* ============================================================
-   CHI. — Gallery / Browse page
-   Work rail (click to select) · inline detail panel · random
-   Data: Google Sheets CSV (published)
+   CHI. — Gallery
+   One page, two views, real URLs:
+     gallery.html                         → all three categories
+     gallery.html?collection=design       → one category's index
+     gallery.html?collection=design&id=x  → a project write-up
+   Moving between them uses the History API (no reload, back button
+   works, scroll position on the index is remembered). Without JS
+   the same links still load normally.
    ============================================================ */
-const API_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPkrIyHaNBs3UJdpLAa9OrGxSFzUHtxuzSPZd-aeqIff8U0KILjsYAaa5SSHNP431bIZ7Ae7aTYHnx/pub?gid=18930479&single=true&output=csv';
+(function () {
+    'use strict';
 
-const THUMB_DIR = 'images/thumb/';
-const GENRES = {
-    fashion: { label: 'Fashion work' },
-    art:     { label: 'Art & design' },
-    writing: { label: 'Writing' },
-    data:    { label: 'Data & decks' }
-};
-const COLLECTION_DESC = {
-    all:     'Every visible project across fashion, art, data and writing — the full catalogue.',
-    fashion: 'Lines development, sketches, shows and upcycling — fashion as making and as system.',
-    art:     '3D multimedia, interactive visuals and generative pieces — art as experiment.',
-    writing: 'Creative, academic and opinion pieces — writing as research and voice.',
-    data:    'Case studies, dashboards and decks — data as storytelling.'
-};
+    const $ = sel => document.querySelector(sel);
+    const { esc, rich, CATEGORIES, ORDER } = Chi;
 
-let portfolioData = null;
-let currentFilter = 'all';
-let items = [];
-
-document.addEventListener('DOMContentLoaded', () => {
-    initNavScroll();
-    initProjectsMenu();
-    initRandom();
-    initLightbox();
-    initRailArrows();
-    initScrollCue();
-    loadGallery();
-});
-
-/* ---------- data ---------- */
-async function loadData() {
-    if (portfolioData) return portfolioData;
-    const res = await fetch(API_BASE_URL);
-    if (!res.ok) throw new Error('Network error');
-    portfolioData = parseCSV(await res.text());
-    return portfolioData;
-}
-
-// A real CSV parser (not line-by-line): tracks quote state across the whole
-// text so a quoted cell can contain commas, newlines (Google Sheets exports
-// multi-line cells as literal line breaks inside quotes), and escaped ""
-// quotes — all things that show up constantly once a cell holds actual HTML.
-function parseCSV(csv) {
-    const text = csv.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const rows = [];
-    let row = [], field = '', inQuotes = false;
-
-    for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        if (inQuotes) {
-            if (ch === '"') {
-                if (text[i + 1] === '"') { field += '"'; i++; } // escaped quote
-                else inQuotes = false;
-            } else {
-                field += ch;
-            }
-        } else if (ch === '"') {
-            inQuotes = true;
-        } else if (ch === ',') {
-            row.push(field); field = '';
-        } else if (ch === '\n') {
-            row.push(field); field = '';
-            rows.push(row); row = [];
-        } else {
-            field += ch;
-        }
-    }
-    if (field !== '' || row.length) { row.push(field); rows.push(row); }
-    if (!rows.length) return [];
-
-    const headers = rows[0].map(h => h.trim());
-    return rows.slice(1)
-        .filter(cols => cols.some(v => v.trim() !== ''))
-        .map(cols => headers.reduce((obj, h, i) => { obj[h] = (cols[i] ?? '').trim(); return obj; }, {}));
-}
-
-const visible = items => items.filter(i => (i.show || '').toLowerCase() === 'y');
-
-/* ---------- main ---------- */
-async function loadGallery() {
-    showLoading(true);
-    try {
-        const data = visible(await loadData());
-        const params = new URLSearchParams(window.location.search);
-        const requested = (params.get('collection') || 'all').toLowerCase();
-        currentFilter = GENRES[requested] ? requested : 'all';
-        items = currentFilter === 'all' ? data : data.filter(i => i.collection === currentFilter);
-
-        updateHead();
-
-        if (!items.length) {
-            showError('No projects in this collection yet.');
-            return;
-        }
-
-        renderRail();
-        showLoading(false);
-
-        const requestedId = params.get('id');
-        const requestedItem = items.find(i => i.id === requestedId);
-        const initial = requestedItem || items[0];
-        selectWork(initial, { scroll: Boolean(requestedItem), updateUrl: false });
-    } catch (e) {
-        console.error(e);
-        showError('Could not load the catalogue. Check your connection and refresh.');
-    }
-}
-
-function updateHead() {
-    const title = currentFilter === 'all' ? 'Browse everything' : GENRES[currentFilter].label;
-    const titleEl = document.getElementById('collectionTitle');
-    const descEl = document.getElementById('collectionDesc');
-    const crumb = document.getElementById('crumbCurrent');
-    const pageTitle = document.getElementById('pageTitle');
-    if (titleEl) titleEl.textContent = title;
-    if (descEl) descEl.textContent = COLLECTION_DESC[currentFilter];
-    if (crumb) crumb.textContent = title;
-    if (pageTitle) pageTitle.textContent = `Chi Hoang — ${title}`;
-
-    document.querySelectorAll('.topnav-links a[data-nav]').forEach(a => {
-        a.classList.toggle('active', a.dataset.nav === currentFilter);
-    });
-}
-
-/* ---------- work rail ---------- */
-function renderRail() {
-    const rail = document.getElementById('workRail');
-    if (!rail) return;
-
-    const countEl = document.getElementById('railCount');
-    if (countEl) countEl.textContent = items.length === 1 ? '1 project' : `${items.length} projects`;
-
-    rail.innerHTML = items.map(item => {
-        const genre = GENRES[item.collection] ? item.collection : 'fashion';
-        const img = item.image_main ? THUMB_DIR + item.image_main.trim() : '';
-        return `
-            <button type="button" class="work-card" data-id="${item.id}" data-genre="${genre}" aria-pressed="false" aria-label="Open ${escapeAttr(item.title)}">
-                <span class="work-media">
-                    ${img ? `<img src="${img}" alt="" loading="lazy">` : ''}
-                    <span class="work-shade"></span>
-                    <span class="work-open" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
-                    </span>
-                    <span class="work-cap">
-                        <span class="work-tag"><span class="puck"></span>${GENRES[genre].label}</span>
-                        <span class="work-title">${escapeHTML(item.title)}</span>
-                    </span>
-                </span>
-            </button>`;
-    }).join('');
-
-    rail.querySelectorAll('.work-card').forEach(card => {
-        const item = items.find(i => i.id === card.dataset.id);
-        card.addEventListener('click', () => {
-            if (item) selectWork(item, { scroll: true, updateUrl: true });
-        });
-        card.addEventListener('mouseenter', () => showHoverSynopsis(item));
-        card.addEventListener('mouseleave', hideHoverSynopsis);
-        card.addEventListener('focus', () => showHoverSynopsis(item));
-        card.addEventListener('blur', hideHoverSynopsis);
-    });
-
-    const wrap = document.getElementById('railWrap');
-    if (wrap) wrap.style.display = 'flex';
-    updateRailArrows();
-}
-
-// preview holds the long synopsis; description is a short subtitle
-function showHoverSynopsis(item) {
-    const el = document.getElementById('hoverSynopsis');
-    if (!el || !item) return;
-    el.textContent = item.preview || item.description || '';
-    el.classList.add('is-visible');
-}
-function hideHoverSynopsis() {
-    const el = document.getElementById('hoverSynopsis');
-    if (el) el.classList.remove('is-visible');
-}
-
-function initRailArrows() {
-    const rail = document.getElementById('workRail');
-    const prev = document.getElementById('railPrev');
-    const next = document.getElementById('railNext');
-    if (!rail || !prev || !next) return;
-    prev.addEventListener('click', () => rail.scrollBy({ left: -rail.clientWidth * 0.85, behavior: 'smooth' }));
-    next.addEventListener('click', () => rail.scrollBy({ left: rail.clientWidth * 0.85, behavior: 'smooth' }));
-    rail.addEventListener('scroll', updateRailArrows, { passive: true });
-    window.addEventListener('resize', updateRailArrows);
-}
-
-function updateRailArrows() {
-    const rail = document.getElementById('workRail');
-    const prev = document.getElementById('railPrev');
-    const next = document.getElementById('railNext');
-    if (!rail || !prev || !next) return;
-
-    const scrollable = rail.scrollWidth > rail.clientWidth + 4;
-    prev.style.display = scrollable ? 'grid' : 'none';
-    next.style.display = scrollable ? 'grid' : 'none';
-    if (!scrollable) return;
-
-    prev.disabled = rail.scrollLeft <= 4;
-    next.disabled = rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 4;
-}
-
-/* ---------- scroll cue — invites the reader from the rail down to the write-up ---------- */
-function initScrollCue() {
-    const cue = document.getElementById('scrollCue');
-    if (!cue) return;
-    cue.addEventListener('click', () => {
-        const detail = document.getElementById('detail');
-        if (detail) detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-}
-
-function updateScrollCue(item) {
-    const cue = document.getElementById('scrollCue');
-    const label = document.getElementById('scrollCueLabel');
-    if (!cue) return;
-    if (label) label.textContent = `Read “${item.title}”`;
-    cue.style.display = 'inline-flex';
-}
-
-/* ---------- selection → inline detail ---------- */
-function selectWork(item, opts = {}) {
-    document.querySelectorAll('.work-card').forEach(card => {
-        const active = card.dataset.id === item.id;
-        card.classList.toggle('is-active', active);
-        card.setAttribute('aria-pressed', String(active));
-        if (active && opts.centerRail) {
-            card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        }
-    });
-
-    renderDetail(item);
-
-    if (opts.updateUrl !== false) {
-        const params = new URLSearchParams(window.location.search);
-        if (currentFilter === 'all') params.delete('collection'); else params.set('collection', currentFilter);
-        params.set('id', item.id);
-        history.replaceState(null, '', window.location.pathname + '?' + params.toString());
-    }
-
-    if (opts.scroll) {
-        const detail = document.getElementById('detail');
-        if (detail) detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-}
-
-function renderDetail(item) {
-    const detail = document.getElementById('detail');
-    const heroMedia = document.getElementById('detailHeroMedia');
-    const titleEl = document.getElementById('detailTitle');
-    const metaEl = document.getElementById('detailMeta');
-    const main = document.getElementById('detailMain');
-    if (!detail || !main) return;
-
-    const genre = GENRES[item.collection] ? item.collection : 'fashion';
-
-    document.title = `Chi Hoang — ${item.title}`;
-    if (titleEl) titleEl.textContent = item.title;
-    if (metaEl) {
-        metaEl.innerHTML =
-            `<span class="genre">${GENRES[genre].label}</span>` +
-            `<span class="sep">◆</span><span>Project</span>` +
-            (item.category ? `<span class="sep">◆</span><span>${escapeHTML(item.category)}</span>` : '');
-    }
-
-    let heroSrc = '';
-    for (let i = 1; i <= 20 && !heroSrc; i++) {
-        if (item[`pic${i}`]) heroSrc = `images/${item[`pic${i}`]}`;
-    }
-    if (!heroSrc && item.image_main) heroSrc = THUMB_DIR + item.image_main.trim();
-    if (heroMedia) heroMedia.innerHTML = heroSrc ? `<img src="${heroSrc}" alt="">` : '';
-
-    let html = '';
-    if (item.description) html += `<p class="post-lead">${escapeHTML(item.description)}</p>`;
-
-    const embedRaw = (item.embed || item.Embed || '').trim().replace(/^["']|["']$/g, '');
-    if (embedRaw) {
-        const embedHTML = buildEmbed(embedRaw);
-        if (embedHTML) html += `<div class="post-embed">${embedHTML}</div>`;
-    }
-
-    if (item.links) {
-        const links = item.links.split(',').map(s => s.trim()).filter(Boolean);
-        html += `<div class="post-links">` + links.map(entry => {
-            if (entry.includes('__')) {
-                const [display, url] = entry.split('__').map(s => s.trim());
-                return `<a class="btn-pill" href="${url}" target="_blank" rel="noopener noreferrer">↗ ${escapeHTML(display)}</a>`;
-            }
-            return `<a class="btn-pill" href="${entry}" target="_blank" rel="noopener noreferrer">↗ ${escapeHTML(entry)}</a>`;
-        }).join('') + `</div>`;
-    }
-
-    if (item.content) {
-        html += `<div class="post-long-content">${renderWriteup(item.content)}</div>`;
-    }
-
-    if (item.tools) {
-        html += `
-            <div class="post-tools">
-                <h3>Tools used</h3>
-                <p>${escapeHTML(item.tools)}</p>
-            </div>`;
-    }
-
-    let i = 1;
-    while (item[`pic${i}`]) {
-        const imgPath = `images/${item[`pic${i}`]}`;
-        const cap = item[`cap${i}`];
-        html += `
-            <figure class="post-figure">
-                <img src="${imgPath}" alt="${escapeAttr(cap || `Project image ${i}`)}" class="post-image" loading="lazy">
-                ${cap ? `<figcaption class="post-caption">${escapeHTML(cap)}</figcaption>` : ''}
-            </figure>`;
-        i++;
-    }
-
-    main.innerHTML = html;
-    detail.style.display = 'block';
-    renderWorkNav(item);
-    updateScrollCue(item);
-    setTimeout(scaleEmbeds, 60);
-}
-
-/* prev / next within the currently loaded collection */
-function renderWorkNav(item) {
-    const nav = document.getElementById('workNav');
-    if (!nav) return;
-    const idx = items.findIndex(i => i.id === item.id);
-    const prevItem = idx > 0 ? items[idx - 1] : null;
-    const nextItem = idx < items.length - 1 ? items[idx + 1] : null;
-
-    nav.innerHTML =
-        (prevItem ? `<button type="button" class="btn-pill work-nav-btn" data-dir="prev">← ${escapeHTML(prevItem.title)}</button>` : '<span></span>') +
-        (nextItem ? `<button type="button" class="btn-pill work-nav-btn" data-dir="next">${escapeHTML(nextItem.title)} →</button>` : '<span></span>');
-
-    const prevBtn = nav.querySelector('[data-dir="prev"]');
-    const nextBtn = nav.querySelector('[data-dir="next"]');
-    if (prevBtn) prevBtn.addEventListener('click', () => selectWork(prevItem, { scroll: true, updateUrl: true, centerRail: true }));
-    if (nextBtn) nextBtn.addEventListener('click', () => selectWork(nextItem, { scroll: true, updateUrl: true, centerRail: true }));
-}
-
-/* ---------- embeds ---------- */
-function buildEmbed(embedContent) {
-    if (/youtube\.com|youtu\.be/.test(embedContent)) {
-        let videoId = '';
-        if (embedContent.includes('watch?v=')) videoId = embedContent.split('v=')[1]?.split('&')[0] || '';
-        else if (embedContent.includes('youtu.be/')) videoId = embedContent.split('youtu.be/')[1]?.split('?')[0] || '';
-        else if (embedContent.includes('embed/')) videoId = embedContent.split('embed/')[1]?.split('?')[0] || '';
-        if (videoId) {
-            return `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
-        }
-    }
-    if (embedContent.includes('<iframe')) {
-        const m = embedContent.match(/src\s*=\s*["']([^"']+)["']/i) || embedContent.match(/src\s*=\s*([^\s>]+)/i);
-        if (m) {
-            return `<iframe src="${m[1]}" frameborder="0" allowfullscreen
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
-        }
-        return embedContent;
-    }
-    if (/^https?:\/\//i.test(embedContent)) {
-        return `<iframe src="${embedContent}" frameborder="0" allowfullscreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
-    }
-    if (embedContent.includes('<')) return embedContent;
-    return '';
-}
-
-function scaleEmbeds() {
-    const baseWidth = 1920;
-    document.querySelectorAll('.post-embed').forEach(container => {
-        const iframe = container.querySelector('iframe');
-        if (!iframe) return;
-        const scale = container.offsetWidth / baseWidth;
-        iframe.style.transform = `scale(${Math.min(scale, 1)})`;
-    });
-}
-window.addEventListener('resize', scaleEmbeds);
-
-/* ---------- lightbox ---------- */
-function initLightbox() {
-    const lb = document.getElementById('lightbox');
-    const lbImg = document.getElementById('lbImg');
-    const close = document.getElementById('lbClose');
-    if (!lb) return;
-
-    document.addEventListener('click', e => {
-        const img = e.target.closest('.post-image');
-        if (img) {
-            lbImg.src = img.src;
-            lbImg.alt = img.alt;
-            lb.classList.add('open');
-            lb.setAttribute('aria-hidden', 'false');
-            document.body.style.overflow = 'hidden';
-        }
-    });
-    const shut = () => {
-        lb.classList.remove('open');
-        lb.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
+    const state = {
+        projects: [],
+        view: null,        // 'index' | 'project'
+        key: null,         // scroll-memory key for the current view
+        currentId: null,
+        scroll: new Map(),
+        images: []         // lightbox set for the open project
     };
-    if (close) close.addEventListener('click', shut);
-    lb.addEventListener('click', e => { if (e.target === lb) shut(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') shut(); });
-}
+    let embedObserver = null;
 
-/* ---------- random ---------- */
-function initRandom() {
-    const btn = document.getElementById('randomBtn');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-        const lbl = btn.querySelector('.lbl');
-        const orig = lbl.textContent;
-        btn.classList.add('is-loading');
-        lbl.textContent = 'Rolling…';
+    document.addEventListener('DOMContentLoaded', () => {
+        Chi.mountGrain($('#grain'), 'quiet');
+        Chi.fillYear();
+        Chi.wireCopyLink();
+        Chi.wireSurprise({ onPick: item => go(item.url), exclude: () => state.currentId });
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+        initBar();
+        initRouting();
+        initLightbox();
+        boot();
+    });
+
+    async function boot(force) {
+        renderSkeleton();
         try {
-            const data = visible(await loadData());
-            if (!data.length) throw new Error('empty');
-            const pick = data[Math.floor(Math.random() * data.length)];
-            window.location.href = `gallery.html?collection=${pick.collection}&id=${pick.id}`;
-        } catch (e) {
-            console.error(e);
-        } finally {
-            btn.classList.remove('is-loading');
-            lbl.textContent = orig;
+            const all = await Chi.loadProjects({ force });
+            state.projects = all.filter(p => p.visible);
+            route();
+        } catch (err) {
+            console.error('Gallery: could not load the sheet.', err);
+            renderError();
         }
-    });
-}
-
-/* ---------- ui helpers ---------- */
-function initNavScroll() {
-    const nav = document.getElementById('topnav');
-    if (!nav) return;
-    const onScroll = () => nav.classList.toggle('is-scrolled', window.scrollY > 24);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-}
-
-/* ---------- phone nav: "Projects" dropdown ----------
-   On phone widths the four gallery links (Fashion / Art & Design /
-   Writing / Data & Decks) collapse behind a single "Projects" toggle
-   (see the .nav-projects rules in style.css). Above that breakpoint
-   the same markup just renders as a plain inline link row, so this
-   only needs to manage the open/closed state. */
-function initProjectsMenu() {
-    const wrap = document.getElementById('navProjects');
-    const toggle = document.getElementById('projectsToggle');
-    const menu = document.getElementById('projectsMenu');
-    if (!wrap || !toggle || !menu) return;
-
-    const close = () => {
-        wrap.classList.remove('is-open');
-        toggle.setAttribute('aria-expanded', 'false');
-    };
-    const open = () => {
-        wrap.classList.add('is-open');
-        toggle.setAttribute('aria-expanded', 'true');
-    };
-
-    toggle.addEventListener('click', e => {
-        e.stopPropagation();
-        wrap.classList.contains('is-open') ? close() : open();
-    });
-    document.addEventListener('click', e => { if (!wrap.contains(e.target)) close(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
-    window.addEventListener('resize', () => { if (window.innerWidth > 820) close(); });
-}
-
-function showLoading(show) {
-    const loading = document.getElementById('loadingState');
-    const error = document.getElementById('errorState');
-    const wrap = document.getElementById('railWrap');
-    const detail = document.getElementById('detail');
-    const cue = document.getElementById('scrollCue');
-    if (loading) loading.style.display = show ? 'block' : 'none';
-    if (show && error) error.style.display = 'none';
-    if (show && wrap) wrap.style.display = 'none';
-    if (show && detail) detail.style.display = 'none';
-    if (show && cue) cue.style.display = 'none';
-}
-
-function showError(msg) {
-    const loading = document.getElementById('loadingState');
-    const error = document.getElementById('errorState');
-    const wrap = document.getElementById('railWrap');
-    const detail = document.getElementById('detail');
-    const cue = document.getElementById('scrollCue');
-    if (loading) loading.style.display = 'none';
-    if (wrap) wrap.style.display = 'none';
-    if (detail) detail.style.display = 'none';
-    if (cue) cue.style.display = 'none';
-    if (error) {
-        error.style.display = 'block';
-        error.innerHTML = `<p>${escapeHTML(msg)}</p>`;
     }
-}
 
-function escapeHTML(s) {
-    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-function escapeAttr(s) { return escapeHTML(s).replace(/"/g, '&quot;'); }
+    /* ---------- routing ---------- */
+    function initRouting() {
+        document.addEventListener('click', e => {
+            const a = e.target.closest('a[data-route]');
+            if (!a || e.defaultPrevented || e.button !== 0) return;
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === '_blank') return;
+            e.preventDefault();
+            go(a.href);
+        });
+        window.addEventListener('popstate', () => { rememberScroll(); route(); });
+    }
 
-/* turn bare URLs in text into links */
-function linkify(text) {
-    return text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
-}
+    function go(url, opts = {}) {
+        const next = new URL(url, location.href);
+        if (next.pathname !== location.pathname) { location.href = next.href; return; }
+        if (next.search === location.search && !opts.force) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+        rememberScroll();
+        history[opts.replace ? 'replaceState' : 'pushState'](null, '', next.pathname + next.search);
+        route();
+    }
 
-/* ---------- write-up content: plain text vs. embedded HTML ----------
-   The sheet's "content" cell can hold either plain prose or actual HTML
-   pasted straight into it (e.g. <p>, <img>, <iframe>, custom <div>s...).
-   If it looks like markup, inject it as-is so it renders like real HTML.
-   Otherwise treat it as plain text: escape it, auto-link bare URLs, and
-   turn line breaks into <br> — the previous behaviour, unchanged. */
-function looksLikeHTML(str) {
-    return /<\/?[a-z][\s\S]*?>/i.test(str);
-}
-function renderWriteup(raw) {
-    if (looksLikeHTML(raw)) return raw;
-    return linkify(escapeHTML(raw).replace(/\n/g, '<br>'));
-}
+    function rememberScroll() {
+        if (state.view === 'index' && state.key) state.scroll.set(state.key, window.scrollY);
+    }
+
+    function route() {
+        if (!state.projects.length) { renderEmpty(); return; }
+        const params = new URLSearchParams(location.search);
+        const id = params.get('id');
+        const cat = Chi.resolveCategory(params.get('collection'));
+        const item = id ? state.projects.find(p => p.id === id) : null;
+
+        if (item) renderProject(item);
+        else renderIndex(cat, id ? 'That project isn’t available right now. Here’s the rest of the work.' : '');
+
+        // Tidy old-style or stale URLs (?collection=fashion, unknown ids)
+        // into the canonical form, without adding a history entry.
+        const raw = params.get('collection');
+        const stale = item ? raw !== item.cat : (id || (raw && raw !== cat));
+        if (stale) history.replaceState(null, '', item ? Chi.projectUrl(item.cat, item.id) : Chi.categoryUrl(cat));
+    }
+
+    // Within a category, sources keep the order listed in CATEGORIES (Design:
+// fashion before art); otherwise the sheet's own row order is kept.
+const inCat = cat => {
+        const order = CATEGORIES[cat].sources;
+        return state.projects
+            .map((p, i) => ({ p, i }))
+            .filter(x => x.p.cat === cat)
+            .sort((a, b) => (order.indexOf(a.p.source) - order.indexOf(b.p.source)) || a.i - b.i)
+            .map(x => x.p);
+    };
+
+    function setNav(cat) {
+        document.querySelectorAll('.bar-nav a[data-nav]').forEach(a => {
+            if (a.dataset.nav === cat) a.setAttribute('aria-current', 'page');
+            else a.removeAttribute('aria-current');
+        });
+    }
+
+    function swap(html, focus) {
+        const view = $('#view');
+        view.classList.remove('is-entering');
+        view.innerHTML = html;
+        void view.offsetWidth; // restart the entrance animation
+        view.classList.add('is-entering');
+        if (focus) view.focus({ preventScroll: true });
+    }
+
+    /* ---------- index ---------- */
+    function card(p, i) {
+        const media = p.thumb
+            ? `<img src="${esc(p.thumb)}" alt="" loading="${i < 6 ? 'eager' : 'lazy'}" decoding="async">`
+            : '';
+        return `
+            <a class="card" href="${esc(p.url)}" data-route style="--i:${Math.min(i, 12)}">
+                <span class="card-media${p.thumb ? '' : ' media-missing'}" data-media>${media}</span>
+                <span class="card-meta"><span>${esc(p.tag)}</span><span class="card-num">${String(i + 1).padStart(2, '0')}</span></span>
+                <span class="card-title">${esc(p.title)}</span>
+                <span class="card-text">${esc(p.synopsis)}</span>
+            </a>`;
+    }
+
+    function renderIndex(cat, notice) {
+        const fromProject = state.view === 'project';
+        state.view = 'index';
+        state.key = `index:${cat || 'all'}`;
+        state.currentId = null;
+        setNav(cat);
+        teardownEmbeds();
+
+        const note = notice ? `<p class="notice">${esc(notice)}</p>` : '';
+        let html;
+
+        if (cat) {
+            const meta = CATEGORIES[cat];
+            const list = inCat(cat);
+            document.title = `${meta.label} — Chi Hoang`;
+            html = `
+                <header class="index-head">
+                    ${note}
+                    <p class="eyebrow">${list.length} ${list.length === 1 ? 'project' : 'projects'}</p>
+                    <h1 class="index-title">${esc(meta.label)}</h1>
+                    <p class="index-blurb">${esc(meta.blurb)}</p>
+                </header>
+                ${list.length
+                    ? `<div class="grid">${list.map(card).join('')}</div>`
+                    : `<p class="state">Nothing here yet.</p>`}`;
+        } else {
+            document.title = 'Work — Chi Hoang';
+            html = `
+                <header class="index-head">
+                    ${note}
+                    <p class="eyebrow">${state.projects.length} projects</p>
+                    <h1 class="index-title">Selected work</h1>
+                    <p class="index-blurb">Three ways into the same question: how culture moves, and how to show it.</p>
+                </header>
+                ${ORDER.map(key => {
+                    const list = inCat(key);
+                    if (!list.length) return '';
+                    return `
+                        <section class="shelf" aria-labelledby="shelf-${key}">
+                            <div class="shelf-head">
+                                <h2 class="shelf-title" id="shelf-${key}">${esc(CATEGORIES[key].label)}</h2>
+                                <a class="shelf-link" href="${esc(Chi.categoryUrl(key))}" data-route>View all ${list.length} <span aria-hidden="true">→</span></a>
+                            </div>
+                            <div class="grid">${list.map(card).join('')}</div>
+                        </section>`;
+                }).join('')}`;
+        }
+
+        swap(html, fromProject);
+        const y = state.scroll.get(state.key) || 0;
+        requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'instant' }));
+    }
+
+    /* ---------- project ---------- */
+    function figure(f, n, title, hero) {
+        const long = f.cap && Chi.plainLength(f.cap) > 170;
+        const alt = f.cap && !long ? Chi.tidy(f.cap).replace(/<[^>]+>/g, '') : `${title}, image ${n + 1}`;
+        return `
+            <figure class="fig${hero ? ' fig-hero' : ''}" data-media>
+                <img class="zoomable" src="${esc(f.src)}" alt="${esc(alt)}" loading="${hero ? 'eager' : 'lazy'}" decoding="async">
+                ${f.cap && !long ? `<figcaption>${rich(f.cap).replace(/^<p>|<\/p>$/g, '')}</figcaption>` : ''}
+            </figure>
+            ${long ? `<div class="prose fig-note">${rich(f.cap)}</div>` : ''}`;
+    }
+
+    function renderProject(item) {
+        state.view = 'project';
+        state.key = `project:${item.id}`;
+        state.currentId = item.id;
+        setNav(item.cat);
+        teardownEmbeds();
+
+        const meta = CATEGORIES[item.cat];
+        const list = inCat(item.cat);
+        const idx = list.findIndex(p => p.id === item.id);
+        const prev = list.length > 1 ? list[(idx - 1 + list.length) % list.length] : null;
+        const next = list.length > 1 ? list[(idx + 1) % list.length] : null;
+
+        // Lead media: the embed if there is one, else the first image, else the thumbnail.
+        const figs = item.figures.slice();
+        let lead = embed(item.embed, item.title);
+        if (!lead && figs.length) lead = figure(figs.shift(), 0, item.title, true);
+        else if (!lead && item.thumb) lead = figure({ src: item.thumb, cap: '' }, 0, item.title, true);
+
+        const links = item.links.length
+            ? `<div class="pills">${item.links.map(l => `
+                <a class="pill" href="${esc(l.href)}" target="_blank" rel="noopener noreferrer">${esc(l.label)} <span aria-hidden="true">↗</span></a>`).join('')}
+               </div>`
+            : '';
+
+        const pager = (prev && next) ? `
+            <nav class="pager" aria-label="More ${esc(meta.label)}">
+                <a class="pager-link" href="${esc(prev.url)}" data-route>
+                    <span class="pager-label"><span aria-hidden="true">←</span> Previous</span>
+                    <span class="pager-title">${esc(prev.title)}</span>
+                </a>
+                <a class="pager-all" href="${esc(Chi.categoryUrl(item.cat))}" data-route>All ${esc(meta.label)}</a>
+                <a class="pager-link is-next" href="${esc(next.url)}" data-route>
+                    <span class="pager-label">Next <span aria-hidden="true">→</span></span>
+                    <span class="pager-title">${esc(next.title)}</span>
+                </a>
+            </nav>` : `
+            <nav class="pager is-solo" aria-label="More work">
+                <a class="pager-all" href="${esc(Chi.categoryUrl(item.cat))}" data-route>All ${esc(meta.label)}</a>
+            </nav>`;
+
+        document.title = `${item.title} — Chi Hoang`;
+        swap(`
+            <article class="project">
+                <header class="proj-head">
+                    <a class="back" href="${esc(Chi.categoryUrl(item.cat))}" data-route><span aria-hidden="true">←</span> ${esc(meta.label)}</a>
+                    <p class="eyebrow">${esc(item.tag || meta.label)}</p>
+                    <h1 class="proj-title">${esc(item.title)}</h1>
+                    ${item.synopsis && item.synopsis !== item.type ? `<p class="proj-lead">${esc(item.synopsis)}</p>` : ''}
+                    ${links}
+                </header>
+                ${lead}
+                ${item.content ? `<div class="prose">${rich(item.content)}</div>` : ''}
+                ${item.tools ? `<aside class="prose tools"><p class="eyebrow">Tools</p><p>${esc(item.tools)}</p></aside>` : ''}
+                ${figs.map((f, n) => figure(f, n + 1, item.title, false)).join('')}
+                ${pager}
+            </article>`, true);
+
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        setupEmbeds();
+        state.images = Array.from(document.querySelectorAll('#view img.zoomable'));
+    }
+
+    /* ---------- embeds ----------
+       YouTube → responsive 16:9. Small fixed-size widgets (e.g. Behance)
+       keep their own ratio. Anything else (p5.js sketches, web apps) is
+       rendered on a 1280×800 "stage" and scaled down to fit, so it sees a
+       desktop-sized viewport even on a phone. */
+    const STAGE_W = 1280, STAGE_H = 800;
+
+    function attr(html, name) {
+        const m = html.match(new RegExp(`${name}\\s*=\\s*["']([^"']+)["']`, 'i'))
+            || html.match(new RegExp(`${name}\\s*=\\s*([^\\s>]+)`, 'i'));
+        return m ? m[1] : '';
+    }
+
+    function youtubeId(str) {
+        const m = str.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/i);
+        return m ? m[1] : '';
+    }
+
+    const ALLOW = 'accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture';
+
+    function embed(raw, title) {
+        const src0 = String(raw || '').trim().replace(/^["']|["']$/g, '');
+        if (!src0) return '';
+        const t = esc(title);
+
+        const yt = youtubeId(src0);
+        if (yt) {
+            return `<div class="fig fig-hero"><div class="embed embed-video">
+                <iframe src="https://www.youtube-nocookie.com/embed/${esc(yt)}" title="${t}" loading="lazy" allow="${ALLOW}" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            </div></div>`;
+        }
+
+        let src = '', w = 0, h = 0;
+        if (/<iframe/i.test(src0)) {
+            src = attr(src0, 'src');
+            w = parseInt(attr(src0, 'width'), 10) || 0;
+            h = parseInt(attr(src0, 'height'), 10) || 0;
+            if (!src) return `<div class="fig fig-hero"><div class="embed embed-raw">${src0}</div></div>`;
+        } else if (/^https?:\/\//i.test(src0)) {
+            src = src0;
+        } else if (src0.includes('<')) {
+            return `<div class="fig fig-hero"><div class="embed embed-raw">${src0}</div></div>`;
+        } else return '';
+
+        if (!/^https?:\/\//i.test(src)) return '';
+
+        if (w && h && w < 900) {
+            return `<div class="fig fig-hero"><div class="embed embed-widget" style="aspect-ratio:${w}/${h};max-width:${Math.round(w * 1.4)}px">
+                <iframe src="${esc(src)}" title="${t}" loading="lazy" allow="${ALLOW}"></iframe>
+            </div></div>`;
+        }
+
+        return `<div class="fig fig-hero">
+            <div class="embed embed-stage" data-stage>
+                <iframe src="${esc(src)}" title="${t}" loading="lazy" allow="${ALLOW}" style="width:${STAGE_W}px;height:${STAGE_H}px"></iframe>
+            </div>
+            <p class="embed-note"><a href="${esc(src)}" target="_blank" rel="noopener noreferrer">Open full screen <span aria-hidden="true">↗</span></a></p>
+        </div>`;
+    }
+
+    function setupEmbeds() {
+        const stages = document.querySelectorAll('[data-stage]');
+        if (!stages.length) return;
+        const fit = el => {
+            const frame = el.querySelector('iframe');
+            if (frame) frame.style.transform = `scale(${el.clientWidth / STAGE_W})`;
+        };
+        stages.forEach(fit);
+        if ('ResizeObserver' in window) {
+            embedObserver = new ResizeObserver(entries => entries.forEach(en => fit(en.target)));
+            stages.forEach(el => embedObserver.observe(el));
+        } else {
+            embedObserver = { disconnect: () => window.removeEventListener('resize', onResize) };
+            const onResize = () => stages.forEach(fit);
+            window.addEventListener('resize', onResize);
+        }
+    }
+    function teardownEmbeds() {
+        if (embedObserver) { embedObserver.disconnect(); embedObserver = null; }
+    }
+
+    /* ---------- states ---------- */
+    function renderSkeleton() {
+        const view = $('#view');
+        view.innerHTML = `
+            <div class="index-head" aria-hidden="true">
+                <span class="skel skel-line" style="width:6rem"></span>
+                <span class="skel skel-title"></span>
+                <span class="skel skel-line" style="width:min(28rem,80%)"></span>
+            </div>
+            <div class="grid" aria-hidden="true">
+                ${Array.from({ length: 6 }, () => `
+                    <span class="card is-skel"><span class="card-media skel"></span>
+                    <span class="skel skel-line" style="width:40%;margin-top:1rem"></span>
+                    <span class="skel skel-line" style="width:75%"></span></span>`).join('')}
+            </div>
+            <p class="sr-only" role="status">Loading projects…</p>`;
+    }
+
+    function renderError() {
+        state.view = null;
+        swap(`
+            <div class="state">
+                <h1 class="state-title">The projects didn’t load.</h1>
+                <p>The connection may have dropped. Try again, or come back in a minute.</p>
+                <button type="button" class="pill pill-solid" data-retry>Try again</button>
+            </div>`);
+        $('[data-retry]').addEventListener('click', () => boot(true));
+    }
+
+    function renderEmpty() {
+        swap(`<div class="state"><h1 class="state-title">New work is on its way.</h1>
+            <p><a class="text-btn" href="index.html">Back to the start</a></p></div>`);
+    }
+
+    /* ---------- top bar ---------- */
+    function initBar() {
+        const bar = $('#bar');
+        if (!bar) return;
+        const onScroll = () => bar.classList.toggle('is-scrolled', window.scrollY > 8);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+    }
+
+    /* ---------- lightbox ---------- */
+    function initLightbox() {
+        const lb = $('#lightbox'), img = $('#lbImg'), count = $('#lbCount');
+        const btnClose = $('#lbClose'), btnPrev = $('#lbPrev'), btnNext = $('#lbNext');
+        if (!lb || !img) return;
+        let index = 0, opener = null;
+
+        const show = i => {
+            const set = state.images;
+            if (!set.length) return;
+            index = (i + set.length) % set.length;
+            img.src = set[index].currentSrc || set[index].src;
+            img.alt = set[index].alt;
+            count.textContent = set.length > 1 ? `${index + 1} / ${set.length}` : '';
+            btnPrev.hidden = btnNext.hidden = set.length < 2;
+        };
+        const open = el => {
+            opener = el;
+            show(state.images.indexOf(el));
+            lb.hidden = false;
+            requestAnimationFrame(() => lb.classList.add('is-open'));
+            document.body.classList.add('no-scroll');
+            btnClose.focus();
+        };
+        const close = () => {
+            lb.classList.remove('is-open');
+            document.body.classList.remove('no-scroll');
+            setTimeout(() => { lb.hidden = true; img.removeAttribute('src'); }, 250);
+            if (opener) opener.focus({ preventScroll: true });
+        };
+
+        document.addEventListener('click', e => {
+            const el = e.target.closest('#view img.zoomable');
+            if (el) open(el);
+        });
+        btnClose.addEventListener('click', close);
+        btnPrev.addEventListener('click', () => show(index - 1));
+        btnNext.addEventListener('click', () => show(index + 1));
+        lb.addEventListener('click', e => { if (e.target === lb || e.target.classList.contains('lb-figure')) close(); });
+        document.addEventListener('keydown', e => {
+            if (lb.hidden) return;
+            if (e.key === 'Escape') close();
+            else if (e.key === 'ArrowLeft') show(index - 1);
+            else if (e.key === 'ArrowRight') show(index + 1);
+            else if (e.key === 'Tab') { // keep focus inside the dialog
+                const f = [btnClose, btnPrev, btnNext].filter(b => !b.hidden);
+                const at = f.indexOf(document.activeElement);
+                e.preventDefault();
+                f[(at + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+            }
+        });
+        // images are click targets; give keyboard users the same
+        document.addEventListener('keydown', e => {
+            if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('#view img.zoomable')) {
+                e.preventDefault(); open(e.target);
+            }
+        });
+        new MutationObserver(() => {
+            document.querySelectorAll('#view img.zoomable:not([tabindex])').forEach(im => {
+                im.tabIndex = 0;
+                im.setAttribute('role', 'button');
+                im.setAttribute('aria-label', `Enlarge: ${im.alt}`);
+            });
+        }).observe($('#view'), { childList: true, subtree: true });
+    }
+})();
