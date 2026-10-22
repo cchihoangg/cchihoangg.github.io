@@ -808,7 +808,10 @@ svg { display: block; }
 }
 .fig-hero { margin-top: 0; }
 .fig img {
-    width: 100%;
+    width: 70%;
+   display: block;
+  margin-left: auto;
+  margin-right: auto;
     border-radius: var(--radius);
     background: var(--bg-2);
     cursor: zoom-in;
@@ -827,7 +830,10 @@ svg { display: block; }
 /* embeds */
 .embed {
     position: relative;
-    width: 100%;
+    width: 80%;
+    display: block;
+  margin-left: auto;
+  margin-right: auto;
     overflow: hidden;
     border-radius: var(--radius);
     background: var(--bg-2);
